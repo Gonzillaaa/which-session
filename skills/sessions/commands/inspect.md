@@ -1,6 +1,6 @@
 ---
 description: "Show the last messages of one session and whether it died mid-task."
-argument-hint: "<session id or unique prefix>"
+argument-hint: "<session id or unique prefix> [--file PATH]"
 ---
 
 # /sessions:inspect
@@ -17,5 +17,6 @@ Read-only.
    fi
    python3 "$sessions_skill/scripts/sessions.py" tail <id-or-prefix> --n 4
    ```
-2. Report the last recorded action, relevant file paths, any missing results and the printed next step.
-3. Show the exact resume command emitted by the script. If the folder is unavailable, include that qualification. If no command was printed, report the missing evidence.
+2. When the ID matches several files, show the choices from the CLI. If the user selects a copy, pass its exact path as one argument to `--file`.
+3. Report the last recorded action, relevant file paths, any missing results and the printed next step.
+4. Show the exact resume command emitted by the script. If the folder is unavailable, include that qualification. If no command was printed, report the missing evidence.

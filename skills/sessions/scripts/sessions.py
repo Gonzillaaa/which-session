@@ -120,10 +120,12 @@ def codex_names():
                     rec = json.loads(raw)
                 except ValueError:
                     continue
-                if isinstance(rec, dict) and rec.get("id") and rec.get("thread_name"):
+                if isinstance(rec, dict) and isinstance(rec.get("id"), str) and isinstance(rec.get("thread_name"), str):
                     names[rec["id"]] = rec["thread_name"]
     except FileNotFoundError:
-        pass
+        pass  # Codex can have usable transcripts before it creates this optional index.
+    except OSError as exc:
+        print(f"Could not read optional Codex session_index.jsonl ({exc.strerror}). Using transcript titles.", file=sys.stderr)
     return names
 
 
@@ -201,18 +203,29 @@ def resume_command(agent, sid, cwd):
 
 
 def cmd_tail(args):
-    matches = [(a, s, p) for a, s, p in sources("all") if s.startswith(args.id)]
-    if len(matches) != 1:
-        print(f"{len(matches)} transcripts match '{args.id}'; give a longer prefix." if matches
-              else f"No transcript starts with '{args.id}'.", file=sys.stderr)
+    candidates = [(a, s, p) for a, s, p in sources("all") if s.startswith(args.id)]
+    matches = candidates
+    if args.file is not None:
+        selected = os.path.abspath(args.file)
+        matches = [item for item in candidates if os.path.abspath(item[2]) == selected]
+    if not matches:
+        message = (f"No discovered transcript matching {args.id!r} has path {args.file!r}."
+                   if args.file is not None else f"No transcript starts with {args.id!r}.")
+        print(message, file=sys.stderr)
+        return 1
+    if len(matches) > 1:
+        print(f"{len(matches)} transcripts match {args.id!r}. Inspect a specific file:", file=sys.stderr)
+        for _, sid, path in sorted(matches):
+            print(shlex.join(["which-session", "inspect", sid, "--file", os.path.abspath(path)]), file=sys.stderr)
         return 1
     agent, sid, path = matches[0]
+    same_host_copies = sum(1 for a, s, _ in candidates if (a, s) == (agent, sid)) > 1
     try:
         log = scan(path, agent, turns=args.n)
     except OSError as exc:
         print(f"Cannot inspect transcript: {exc}", file=sys.stderr)
         return 1
-    live = (agent, sid) in live_processes(ps_text())
+    live = not same_host_copies and (agent, sid) in live_processes(ps_text())
     name = (codex_names().get(sid) if agent == "codex" else None) or log.title
     print(f"id: {sid}\ntool: {agent}\nfolder: {log.cwd}\nbranch: {log.branch}\ntitle: {clean(name, SETTINGS['title_width'])}")
     print(f"last active: {fmt_time(log.active)}\n")
@@ -221,8 +234,10 @@ def cmd_tail(args):
         print(f"[{who}] {clean(text, SETTINGS['preview_width'])}\n")
     if log.malformed:
         print(f"Partial history: {log.malformed} unreadable record(s).")
+    last_outcome = log.last_action.outcome if log.last_action else None
     if log.last_action:
-        print("Last recorded tool call: " + describe_action(log.last_action) + " — " + log.last_action.result)
+        result = last_outcome.describe() if last_outcome else "no result recorded"
+        print("Last recorded tool call: " + describe_action(log.last_action) + " — " + result)
     if log.pending:
         for action in log.pending.values():
             print(("Tool call still pending" if live else "Unfinished tool call") + ": " + describe_action(action) + " — no result recorded.")
@@ -232,14 +247,21 @@ def cmd_tail(args):
         targets = list(dict.fromkeys(target for call in log.pending.values() for target in call.targets))
         what = ", ".join(repr(t) for t in targets) if targets else "the effects of the outstanding tool calls"
         print(f"Next step: check {what} before retrying. The transcript records no outcome for the outstanding calls.")
-    elif log.malformed or (log.last_action and log.last_action.result == "no result recorded"):
-        print("Next step: review the incomplete history and verify the last action before continuing.")
-    elif log.last_action and log.last_action.result == "error recorded":
+    elif last_outcome and last_outcome.failed:
         print("Next step: review the recorded tool error before retrying.")
+    elif last_outcome and last_outcome.failed is None:
+        print("Next step: verify the outcome of the last tool call before continuing.")
+    elif log.malformed or (log.last_action and last_outcome is None):
+        print("Next step: review the incomplete history and verify the last action before continuing.")
+    elif same_host_copies:
+        print("Next step: identify the intended copy in the client before resuming.")
     elif log.turns and log.turns[-1][0] == "user":
         print("Next step: reopen the session and pick up the last user request.")
     else:
         print("Next step: reopen the session and review the last exchange.")
+    if same_host_copies:
+        print(f"Multiple {agent} transcripts have the same ID. Native resume selects by ID and cannot specify this file.")
+        return 0
     cmd = resume_command(agent, sid, log.cwd)
     if cmd:
         if not Path(log.cwd).is_dir():
@@ -263,7 +285,7 @@ def positive(value):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="which-session", description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
     for name in ("list", "search"):
         command = sub.add_parser(name)
@@ -279,6 +301,7 @@ def main(argv=None):
         command.set_defaults(fn=cmd_list)
     tail = sub.add_parser("tail", aliases=["inspect"])
     tail.add_argument("id")
+    tail.add_argument("--file", help="select an exact discovered transcript path when the ID matches several copies")
     tail.add_argument("--n", type=positive, default=SETTINGS["turns"])
     tail.set_defaults(fn=cmd_tail)
     args = parser.parse_args(argv)

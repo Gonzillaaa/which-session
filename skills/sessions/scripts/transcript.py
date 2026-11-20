@@ -47,11 +47,25 @@ def excerpt(text, pattern, context):
     return ("…" if start else "") + line[start:end] + ("…" if end < len(line) else "")
 
 
+@dataclass(frozen=True)
+class Outcome:
+    failed: bool | None
+    exit_code: int | None = None
+
+    def describe(self):
+        if self.failed is None:
+            return "result recorded (outcome unknown)"
+        result = "error recorded" if self.failed else "successful result recorded"
+        if self.exit_code is not None:
+            return f"{result} (exit code {self.exit_code})"
+        return result
+
+
 @dataclass
 class Action:
     name: str
     targets: tuple
-    result: str = "no result recorded"
+    outcome: Outcome | None = None
 
 
 def action(name, args):
@@ -94,6 +108,21 @@ class Transcript:
     last_action: Action | None = None
 
 
+def codex_outcome(data):
+    code = data.get("exit_code")
+    if type(code) is int:  # A JSON boolean is not an exit code.
+        return Outcome(code != 0, code)
+    success = data.get("success")
+    if isinstance(success, bool):
+        return Outcome(not success)
+    status = data.get("status")
+    if status in ("failed", "declined"):
+        return Outcome(True)
+    if status == "completed":
+        return Outcome(False)
+    return Outcome(None)
+
+
 def events(rec, agent, log):
     """Yield (event kind, text/tool name, call id, input/result) in transcript order."""
     kind = rec.get("type")
@@ -121,7 +150,7 @@ def events(rec, agent, log):
             if block.get("type") == "tool_use":
                 yield "call", block.get("name") or "tool", block.get("id"), block.get("input")
             elif block.get("type") == "tool_result":
-                yield "result", "", block.get("tool_use_id"), block.get("is_error") is True
+                yield "result", "", block.get("tool_use_id"), Outcome(block.get("is_error") is True)
         return
     data = rec.get("payload")
     if not isinstance(data, dict):
@@ -134,6 +163,8 @@ def events(rec, agent, log):
         log.title = data.get("thread_name") or log.title
         log.background = data.get("thread_source") not in (None, "user") or (
             isinstance(data.get("source"), dict) and "subagent" in data["source"])
+    if kind == "event_msg" and data.get("type") in ("exec_command_end", "patch_apply_end"):
+        yield "result", "", data.get("call_id"), codex_outcome(data)
     if kind != "response_item":
         return
     item, role = data.get("type"), data.get("role")
@@ -144,12 +175,14 @@ def events(rec, agent, log):
     elif item in CALLS:
         yield "call", data.get("name") or item, data.get("call_id") or data.get("id"), data.get("arguments", data.get("input"))
     elif item in RESULTS:
-        yield "result", "", data.get("call_id") or data.get("id"), False
+        yield "result", "", data.get("call_id") or data.get("id"), Outcome(None)
 
 
 def scan(path, agent, *, pattern=None, cutoff=None, context=0, turns=0, undated=False):
     log = Transcript(turns=deque(maxlen=turns))
     inspect = turns > 0
+    outcomes = {}
+    last_call_id = None
     with path.open("rb") as stream:
         for raw in stream:
             try:
@@ -178,10 +211,18 @@ def scan(path, agent, *, pattern=None, cutoff=None, context=0, turns=0, undated=
                             log.match_time, log.match_role, log.match = when, kind, hit
                 elif inspect and kind == "call":
                     log.last_action = action(text, args)
-                    if key:
-                        log.pending[key] = log.last_action
-                elif inspect and key in log.pending:
-                    finished = log.pending.pop(key)
-                    finished.result = "error recorded" if args else "result recorded"
+                    last_call_id = key if isinstance(key, str) else None
+                    if last_call_id and last_call_id not in outcomes:
+                        log.pending[last_call_id] = log.last_action
+                elif inspect and kind == "result" and isinstance(key, str):
+                    # Codex can record output and a separate structured completion
+                    # in either order. A generic output never erases a known outcome.
+                    previous = outcomes.get(key)
+                    if (previous is None or previous.failed is None
+                            or (previous.exit_code is None and args.exit_code is not None)):
+                        outcomes[key] = args
+                    log.pending.pop(key, None)
+    if log.last_action:
+        log.last_action.outcome = outcomes.get(last_call_id)
     log.title = log.title or log.first_user or "(no text yet)"
     return log
