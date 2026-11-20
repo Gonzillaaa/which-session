@@ -1,8 +1,1 @@
-#!/usr/bin/env python3
-"""Run Which Session from a checkout or a symlink on PATH."""
-import os
-from pathlib import Path
-import sys
-
-cli = Path(__file__).resolve().parent / "skills" / "sessions" / "scripts" / "sessions.py"
-os.execv(sys.executable, [sys.executable, str(cli), *sys.argv[1:]])
+which-session

@@ -299,7 +299,7 @@ def main(argv=None):
         command.add_argument("--source", choices=["claude", "codex", "all"], default="all")
         command.add_argument("--json", action="store_true")
         command.set_defaults(fn=cmd_list)
-    tail = sub.add_parser("tail", aliases=["inspect"])
+    tail = sub.add_parser("inspect", aliases=["tail"])
     tail.add_argument("id")
     tail.add_argument("--file", help="select an exact discovered transcript path when the ID matches several copies")
     tail.add_argument("--n", type=positive, default=SETTINGS["turns"])

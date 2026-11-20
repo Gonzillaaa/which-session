@@ -38,7 +38,8 @@ script and its output are identical in both tools.
 
 ## 3. How to run it
 
-Use the full path to `scripts/sessions.py` inside the skill directory supplied by
+If the global CLI is installed, use `which-session list`, `which-session search` or
+`which-session inspect`. Otherwise use the full path to `scripts/sessions.py` inside the skill directory supplied by
 the agent. Keep the caller's working directory so `--here` filters the right project.
 The script uses the Python standard library. For example, with the global Codex install:
 
@@ -76,8 +77,7 @@ is `--days 7`; "yesterday's work in myproject" is `--days 2 --folder myproject`.
 
 ## 5. Recovering one
 
-Run `tail <id-or-prefix>` or `inspect <id-or-prefix>`. Report the recorded tool and
-file targets, any outstanding results, and the printed next step. A missing result
+Run `tail <id-or-prefix>` or `inspect <id-or-prefix>`. Report the recorded tool, file targets, outcome and printed next step. A recorded nonzero exit code calls for reviewing the error. An output with no structured success or failure leaves the outcome unknown. When several transcripts match, present the CLI’s file choices and inspect the selected copy with `--file`. For duplicate IDs within one host, explain why the client cannot select that copy by ID. A missing result
 leaves the effect of the operation unknown. If a matching process is running, check
 it first. Copy the script's quoted resume command exactly. If it cannot identify
 the original directory or full ID, ask the user for the missing information.
