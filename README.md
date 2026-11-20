@@ -1,4 +1,4 @@
-# Session Reentry
+# Which Session
 
 Find the Claude Code or Codex conversation you were working in, see where it stopped, and get the command to reopen it in its original directory.
 

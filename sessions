@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Session Reentry from a checkout or a symlink on PATH."""
+"""Run Which Session from a checkout or a symlink on PATH."""
 import os
 from pathlib import Path
 import sys
