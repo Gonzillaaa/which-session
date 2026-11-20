@@ -1,0 +1,2 @@
+scope: global
+reason: "Finds this user’s Claude Code and Codex sessions from any project directory."
