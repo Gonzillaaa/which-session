@@ -11,11 +11,11 @@ The demo generates two conversations under a temporary directory and points Whic
 - **Backoff notes** has a Claude Code write to `retry-notes.md` with no recorded result. Inspect tells you to check that file before retrying.
 - **Backoff tests** has a Codex command that exited with code 1. Inspect directs you to review the error.
 
-The demo labels the temporary directory `<demo>` in its output. It prints the native resume commands for illustration. Both IDs are synthetic. Real recovery uses the command printed for a real session.
+The demo labels its temporary directory `<demo>` and prints example resume commands with synthetic IDs. For real recovery, run the command from your own inspection. The README preview shows selected fields from this demo, with short ID prefixes that you can pass to `inspect`.
 
 ## Examine the output yourself
 
-This version keeps the fixture in a new directory. The two environment variables apply only to the enclosed commands.
+Pass `--keep` to explore the same two histories yourself. The two environment variables below point the CLI at those histories for the commands inside the parentheses.
 
 ```sh
 demo_dir="$(mktemp -d)/which-session"

@@ -1,17 +1,30 @@
 # Which Session
 
-Find the Claude Code or Codex conversation you remember, see where it stopped and get the command to reopen it in its original directory.
+Find the Claude Code or Codex conversation you remember and reopen it where you left off. Search across both tools by a phrase you typed, inspect the last recorded action, and copy the resume command for the original project.
+
+![Excerpt from a synthetic Codex session. Searching for “retry policy” finds Backoff tests. Inspecting it shows that a command exited with code 1 and suggests reviewing the recorded error before retrying.](examples/recovery-preview.png)
+
+## Get the code
+
+Which Session runs on macOS and Linux with Python 3.9 or newer. It uses the Python standard library.
+
+```sh
+git clone https://github.com/Gonzillaaa/which-session.git
+cd which-session
+```
+
+You can also download and extract the [latest release](https://github.com/Gonzillaaa/which-session/releases/latest).
 
 ## Try it
 
-Start in a checkout of this repository on macOS or Linux with Python 3.9 or newer. These commands work before installation.
+From the checkout or extracted folder, list recent conversations. Replace the quoted phrase with one you remember.
 
 ```sh
 ./which-session list
 ./which-session search "retry policy" --days 30
 ```
 
-To inspect a result, run the following in your terminal and paste the full ID or a unique prefix when prompted.
+To inspect a match, paste its full ID or a unique prefix at the prompt. If the transcript identifies a single original session and folder, inspection prints the command to reopen it. You choose when to run it.
 
 ```sh
 printf 'Session ID: '
@@ -20,56 +33,54 @@ if IFS= read -r session_id && [ -n "$session_id" ]; then
 fi
 ```
 
-An empty history prints a short message and exits successfully. To try both hosts with disposable data, run the [synthetic walkthrough](examples/README.md).
+If your history is empty, try the same workflow with two disposable sessions. The demo shows an interrupted Claude Code edit and a failed Codex command. [Demo details](examples/README.md)
+
+```sh
+python3 examples/demo.py
+```
 
 ## Install for your account
 
-From the checkout, run:
+To run `which-session` from any folder and use the `sessions` skill in both agents, keep the checkout in a permanent location and run:
 
 ```sh
 python3 install.py
 ```
 
-The installer links `which-session` into `~/.local/bin` and registers the `sessions` skill in Codex and Claude Code. It also registers the Claude `/sessions:list`, `/sessions:search`, `/sessions:inspect`, `/sessions:help` and `/sessions:version` commands. New agent sessions can discover the skill. In Codex, invoke `$sessions` or ask it to find a conversation.
+Start a fresh agent session to discover the skill.
 
-| Where | Help | Installed version |
-| --- | --- | --- |
-| Terminal | `which-session help` or `which-session --help` | `which-session version` or `which-session --version` |
-| Claude Code | `/sessions:help` | `/sessions:version` |
-| Codex | `$sessions help` | `$sessions version` |
+| | Search | Help | Version |
+| --- | --- | --- | --- |
+| Terminal | `which-session search "retry policy"` | `which-session help` | `which-session --version` |
+| Claude Code | `/sessions:search "retry policy"` | `/sessions:help` | `/sessions:version` |
+| Codex | `$sessions find "retry policy"` | `$sessions help` | `$sessions version` |
 
-Keep the checkout in place. Changes to it reach your installed commands immediately. If the shell cannot find `which-session`, run `export PATH="$HOME/.local/bin:$PATH"` and add that line to your shell startup file. You can choose an existing directory on your PATH with `python3 install.py --bin-dir DIRECTORY`. The original checkout command `./sessions` remains an alias.
+The installer links the CLI into `~/.local/bin`. If your shell cannot find it, add `export PATH="$HOME/.local/bin:$PATH"` to your shell startup file, or install with `--bin-dir DIRECTORY` to use a directory on your PATH. Changes to the checkout reach the linked commands immediately.
 
-Running the installer again recognizes existing links to this checkout, including links managed by another installer. It reports the path of any conflicting command or skill so you can review it. To uninstall the links it created, run:
+Run `python3 install.py --uninstall` from the same checkout to remove the links the installer created. Use the same bin and agent directories you chose at install time. Existing links and transcript files are preserved. The installer reports conflicting destinations and can be run again.
 
-```sh
-python3 install.py --uninstall
-```
+## Finding a missing session
 
-Use the same `--bin-dir` and agent configuration directories for uninstall. The installer tracks its links under `${XDG_STATE_HOME:-~/.local/state}/which-session/` and preserves pre-existing links and transcript files.
-
-## Finding a conversation
-
-| What you remember | Command |
+| What you remember | What to run |
 | --- | --- |
-| Roughly when you worked | `which-session list --days 14` orders sessions by recorded message or tool activity. |
-| A few words from the conversation | `which-session search "retry policy"` finds literal, case-insensitive phrases in user and assistant messages and shows the speaker and an excerpt. |
-| The project | `which-session list --here` limits results to the current directory. `--folder TEXT` matches part of a recorded path. |
-| An interrupted edit | `which-session inspect ID` shows recent exchanges, recorded tool outcomes and what to check next. It prints the native resume command for you to run. |
+| The project folder | `which-session list --here` from the project, or `which-session list --folder TEXT` for a partial folder name. |
+| The agent | Add `--source claude` or `--source codex` to a list or search. |
+| A conversation further back | `which-session list --days 90 --limit 100 --all` widens the default seven-day window and 15-row limit. |
+| A session ID | `which-session inspect ID` works outside the list’s date window. If several files share an ID, use one of the printed `--file` choices. |
 
-List and search default to the last seven days and 15 results. To widen a search, try `which-session list --days 90 --limit 100 --all`. The default view hides temporary projects, background or empty sessions, and undated histories. `--all` includes these within the selected window and includes undated histories as unknown. Codex worker sessions can inherit the parent’s opening prompt. List and search hide these workers by default. With `--all` they are labeled `codex (background)`; inspecting one shows its recorded parent when available. Independent user sessions and user-created forks can share a title and appear separately. Use `--source claude` or `--source codex` to narrow either command. Inspection by ID also works outside the list’s date window.
+Activity comes from recorded turns and tool events. Search matches literal phrases in user and assistant messages, ignoring case. The default list and search hide background workers, temporary projects, and empty or undated sessions. `--all` includes them. Independent sessions can share a title.
 
-The CLI reads Claude project logs under `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/*/*.jsonl` and Codex rollouts under `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`. If you use a custom agent directory, set the corresponding environment variable before searching or installing. Archived Codex rollouts stored separately, cloud-only conversations and other agents fall outside these locations.
+## History and privacy
 
-Search runs locally and on demand. Normal output can reveal session IDs, project names and matching passages. Inspection can include recent conversation text, local paths and file targets. With `--json`, list and search also expose the transcript path, working directory and last user message. Any excerpts shown inside a hosted agent enter that conversation.
+The CLI reads transcripts locally without changing them. It looks for Claude Code project logs in `~/.claude/projects` and dated Codex rollouts in `~/.codex/sessions`. Set `CLAUDE_CONFIG_DIR` or `CODEX_HOME` for custom locations. Separately archived rollouts and cloud-only conversations are outside this search.
 
-## Development
+A list includes project names and full session IDs. A search adds matching text. Inspection shows recent exchanges and paths. JSON output from list or search also includes the full transcript path, working directory and last user message. Excerpts you display inside a hosted agent become part of that conversation.
 
-The CLI uses the Python standard library. Tests generate synthetic transcripts in temporary directories.
+## Development and feedback
 
 ```sh
 uv run --with pytest pytest -q
-uvx ruff check .
+uvx ruff check . which-session
 ```
 
-[MIT license](LICENSE)
+For a bug report, include your OS, agent version, `which-session --version`, the command and the result you expected. A synthetic example helps others reproduce it. [Report an issue](https://github.com/Gonzillaaa/which-session/issues) · [MIT license](LICENSE)
