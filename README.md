@@ -53,9 +53,9 @@ Start a fresh agent session to discover the skill.
 | --- | --- | --- | --- |
 | Terminal | `which-session search "retry policy"` | `which-session help` | `which-session --version` |
 | Claude Code | `/sessions:search "retry policy"` | `/sessions:help` | `/sessions:version` |
-| Codex | `$sessions find "retry policy"` | `$sessions help` | `$sessions version` |
+| Codex | `$sessions search "retry policy"` | `$sessions help` | `$sessions version` |
 
-The installer links the CLI into `~/.local/bin`. If your shell cannot find it, add `export PATH="$HOME/.local/bin:$PATH"` to your shell startup file, or install with `--bin-dir DIRECTORY` to use a directory on your PATH. Changes to the checkout reach the linked commands immediately.
+The installer links the CLI into `~/.local/bin`. If your shell cannot find it, run `export PATH="$HOME/.local/bin:$PATH"` in this terminal. Add the same line to your shell startup file for future terminals. You can also install with `--bin-dir DIRECTORY` to choose a directory already on your PATH. Changes to the checkout reach the linked commands immediately.
 
 Run `python3 install.py --uninstall` from the same checkout to remove the links the installer created. Use the same bin and agent directories you chose at install time. Existing links and transcript files are preserved. The installer reports conflicting destinations and can be run again.
 
