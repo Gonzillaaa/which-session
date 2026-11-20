@@ -96,6 +96,7 @@ class Transcript:
     title: str = ""
     title_rank: int = 0
     background: bool = False
+    parent_id: str = ""
     first_user: str = ""
     last_user: str = ""
     active: float | None = None
@@ -155,14 +156,6 @@ def events(rec, agent, log):
     data = rec.get("payload")
     if not isinstance(data, dict):
         return
-    if kind == "session_meta":
-        log.cwd = data.get("cwd") or log.cwd
-        git = data.get("git")
-        if isinstance(git, dict):
-            log.branch = git.get("branch") or log.branch
-        log.title = data.get("thread_name") or log.title
-        log.background = data.get("thread_source") not in (None, "user") or (
-            isinstance(data.get("source"), dict) and "subagent" in data["source"])
     if kind == "event_msg" and data.get("type") in ("exec_command_end", "patch_apply_end"):
         yield "result", "", data.get("call_id"), codex_outcome(data)
     if kind != "response_item":
@@ -178,11 +171,37 @@ def events(rec, agent, log):
         yield "result", "", data.get("call_id") or data.get("id"), Outcome(None)
 
 
+def codex_session_id(path):
+    """Codex rollout filenames end with the UUID of the thread that owns the file."""
+    return path.stem[-36:]
+
+
+def apply_codex_header(log, header):
+    log.cwd = header.get("cwd") or log.cwd
+    log.title = header.get("thread_name") or log.title
+    git = header.get("git")
+    if isinstance(git, dict):
+        log.branch = git.get("branch") or log.branch
+    source = header.get("source")
+    worker_source = source.get("subagent") if isinstance(source, dict) else None
+    log.background = log.background or header.get("thread_source") not in (None, "user") or worker_source is not None
+    parent = header.get("parent_thread_id") or header.get("forked_from_id")
+    if not parent and isinstance(worker_source, dict):
+        spawn = worker_source.get("thread_spawn")
+        if isinstance(spawn, dict):
+            parent = spawn.get("parent_thread_id")
+    if isinstance(parent, str):
+        log.parent_id = parent
+
+
 def scan(path, agent, *, pattern=None, cutoff=None, context=0, turns=0, undated=False):
     log = Transcript(turns=deque(maxlen=turns))
     inspect = turns > 0
     outcomes = {}
     last_call_id = None
+    owner_id = codex_session_id(path) if agent == "codex" else None
+    found_owner = False
+    unnamed_header = None
     with path.open("rb") as stream:
         for raw in stream:
             try:
@@ -192,6 +211,18 @@ def scan(path, agent, *, pattern=None, cutoff=None, context=0, turns=0, undated=
                 continue
             if not isinstance(rec, dict):
                 log.malformed += 1
+                continue
+            if owner_id and rec.get("type") == "session_meta":
+                header = rec.get("payload")
+                if isinstance(header, dict):
+                    record_id = header.get("id") or header.get("session_id")
+                    # Forks can include an entire copy of the parent's header.
+                    if record_id == owner_id:
+                        apply_codex_header(log, header)
+                        found_owner = True
+                        unnamed_header = None
+                    elif not record_id and not found_owner and unnamed_header is None:
+                        unnamed_header = header
                 continue
             for kind, text, key, args in events(rec, agent, log):
                 when = timestamp(rec.get("timestamp"))
@@ -222,6 +253,8 @@ def scan(path, agent, *, pattern=None, cutoff=None, context=0, turns=0, undated=
                             or (previous.exit_code is None and args.exit_code is not None)):
                         outcomes[key] = args
                     log.pending.pop(key, None)
+    if unnamed_header is not None:
+        apply_codex_header(log, unnamed_header)
     if log.last_action:
         log.last_action.outcome = outcomes.get(last_call_id)
     log.title = log.title or log.first_user or "(no text yet)"

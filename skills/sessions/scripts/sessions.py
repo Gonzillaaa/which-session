@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 if __name__ == "__main__":
     sys.dont_write_bytecode = True
 
-from transcript import scan
+from transcript import codex_session_id, scan
 
 SETTINGS = json.loads(Path(__file__).with_name("settings.json").read_text())
 TEMP_PREFIXES = ("/private/var/folders/", "/var/folders/", "/private/tmp/", "/tmp/")
@@ -104,7 +104,7 @@ def sources(source):
             yield "claude", path.stem, path
     if source in {"all", "codex"}:
         for path in (codex_dir() / "sessions").glob("*/*/*/rollout-*.jsonl"):
-            yield "codex", path.stem[-36:], path
+            yield "codex", codex_session_id(path), path
 
 
 def codex_dir():
@@ -161,6 +161,7 @@ def cmd_list(args):
             continue
         title = (names.get(sid) if agent == "codex" else None) or log.title
         row = dict(tool=agent, id=sid, title=title, folder=folder, cwd=log.cwd, branch=log.branch,
+                   background=log.background, parent_id=log.parent_id or None,
                    last_user=log.last_user, last_active=fmt_time(log.active), activity_epoch=log.active,
                    mtime=stat.st_mtime, size_kb=stat.st_size // 1024, live=(agent, sid) in live, path=str(path))
         if pattern:
@@ -184,8 +185,9 @@ def cmd_list(args):
     for row in rows:
         title = clean(row["title"], SETTINGS["title_width"])
         mark = " (live)" if row["live"] else ""
+        tool = row["tool"] + (" (background)" if row["background"] else "")
         snippet = (" " + row["match_role"] + ": " + clean(row["match"], SETTINGS["preview_width"]) + " |") if pattern else ""
-        print(f"| {title}{mark} | {row['tool']} | {row['folder']} | {row['last_active']} | `{row['id']}` |" + snippet)
+        print(f"| {title}{mark} | {tool} | {row['folder']} | {row['last_active']} | `{row['id']}` |" + snippet)
     print(f"\n{len(rows)} of {total} sessions. Inspect one with its ID or a unique prefix.")
     return 0
 
@@ -228,6 +230,10 @@ def cmd_tail(args):
     live = not same_host_copies and (agent, sid) in live_processes(ps_text())
     name = (codex_names().get(sid) if agent == "codex" else None) or log.title
     print(f"id: {sid}\ntool: {agent}\nfolder: {log.cwd}\nbranch: {log.branch}\ntitle: {clean(name, SETTINGS['title_width'])}")
+    if log.background:
+        print("session kind: background")
+    if log.parent_id:
+        print(f"parent session: {log.parent_id}")
     print(f"last active: {fmt_time(log.active)}\n")
     for role, text in log.turns:
         who = "you" if role == "user" else agent

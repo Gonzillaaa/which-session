@@ -280,3 +280,52 @@ def test_timezone_resolver_accepts_a_linked_vault_install(tmp_path, monkeypatch)
         assert str(sessions.owner_tz()) == "Asia/Tokyo"
     finally:
         sessions.owner_tz.cache_clear()
+
+
+@pytest.mark.parametrize("parent_last", [True, False])
+def test_codex_copied_parent_header_does_not_change_session_identity(tmp_path, monkeypatch, capsys, parent_last):
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "empty"))
+    parent, worker, user_fork = [f"11111111-2222-4333-8444-{n:012d}" for n in range(1, 4)]
+    p = meta(parent, cwd="/work/parent")
+    w = meta(worker, source="subagent", cwd="/work/worker")
+    w["payload"].update(parent_thread_id=parent, agent_path="/root/test")
+    # A user-created fork also carries a parent ID and can share its opening prompt.
+    u = meta(user_fork, cwd="/work/fork")
+    u["payload"]["parent_thread_id"] = parent
+    prompt = cmsg("user", "Revisit the same question")
+    codex_rollout(tmp_path, parent, [p, prompt])
+    for sid, own in ((worker, w), (user_fork, u)):
+        inherited = p if sid == worker else w
+        records = [own, inherited] if parent_last else [inherited, own]
+        codex_rollout(tmp_path, sid, [*records, prompt])
+
+    for args in (["list"], ["search", "same question"]):
+        sessions.main([*args, "--json"])
+        assert {r["id"] for r in json.loads(capsys.readouterr().out)} == {parent, user_fork}
+    sessions.main(["list", "--all", "--json"])
+    data = {r["id"]: r for r in json.loads(capsys.readouterr().out)}
+    assert data[worker]["background"] and data[worker]["parent_id"] == parent
+    assert data[worker]["cwd"] == "/work/worker" and data[user_fork]["cwd"] == "/work/fork"
+    sessions.main(["list", "--all"])
+    row = next(line for line in capsys.readouterr().out.splitlines() if worker in line)
+    assert "background" in row
+    sessions.main(["inspect", worker])
+    inspected = capsys.readouterr().out
+    assert "folder: /work/worker" in inspected
+    assert parent in inspected
+
+
+def test_codex_legacy_worker_header_without_id_still_resolves(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "empty"))
+    sid = "33333333-3333-4333-8333-333333333333"
+    parent = "44444444-4444-4444-8444-444444444444"
+    legacy = {"type": "session_meta", "payload": {"cwd": "/work/legacy",
+              "source": {"subagent": {"thread_spawn": {"parent_thread_id": parent}}}}}
+    codex_rollout(tmp_path, sid, [meta(parent), legacy, cmsg("user", "legacy work")])
+    sessions.main(["list", "--json"])
+    assert json.loads(capsys.readouterr().out) == []
+    sessions.main(["list", "--json", "--all"])
+    row, = json.loads(capsys.readouterr().out)
+    assert (row["cwd"], row["background"], row["parent_id"]) == ("/work/legacy", True, parent)

@@ -16,6 +16,7 @@ The installer uses links to the checkout. Pulling a new revision there updates t
 ## What to test
 
 - Search for a phrase that appears inside a conversation. Inspect its ID, look at the recorded tool outcome and copy the resume command into your terminal.
+- The default list and search hide Codex worker sessions even when they copy their parent’s opening prompt and metadata. Use `--all` to include labeled workers. Independent sessions with the same topic stay visible.
 - Inspect a failed Codex command. A structured nonzero exit code directs you to the recorded error. A tool output without a reliable status leaves the outcome unknown.
 - If two restored transcripts share an ID, use one of the printed file choices. You can read either copy. The native client selects by ID, so the CLI withholds a resume command when that ID maps to multiple files for that host.
 - Sessions remain discoverable if the optional Codex title index is missing or unreadable. An unreadable index produces a warning on stderr.

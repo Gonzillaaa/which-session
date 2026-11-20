@@ -64,7 +64,7 @@ is `--days 7`; "yesterday's work in myproject" is `--days 2 --folder myproject`.
 
 - **Session** is the session's name, or its first message when it has none.
 - **Tool** is `claude` or `codex`. Codex background threads (safety reviewers,
-  sub-agents) are hidden unless `--all`.
+  sub-agents) are hidden unless `--all`. The rollout’s own metadata identifies workers even when they inherit a parent’s prompt and metadata. With `--all`, worker rows are labeled `codex (background)`. Inspection shows their recorded parent ID when available.
 - **Last active** comes from the latest dated conversation turn, tool call or result.
   File copies and metadata updates do not move a session up the list. Undated histories
   appear as `unknown` with `--all` or can be inspected by ID.
