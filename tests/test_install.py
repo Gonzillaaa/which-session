@@ -40,7 +40,8 @@ def test_live_install_reinstall_and_uninstall(install_env, tmp_path):
     assert [p.lstat().st_ino for p in (cli, codex, claude, commands)] == before
     assert cli.samefile(ROOT / "which-session") and cli.samefile(ROOT / "sessions")
     assert codex.samefile(SKILL) and claude.samefile(SKILL)
-    assert (commands / "inspect.md").samefile(SKILL / "commands/inspect.md")
+    for name in ("help.md", "inspect.md", "version.md"):
+        assert (commands / name).samefile(SKILL / "commands" / name)
     result = subprocess.check_output([cli, "list", "--json"], env=install_env,
                                      cwd=tmp_path, text=True)
     assert result.strip() == "[]"

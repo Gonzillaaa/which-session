@@ -1,7 +1,9 @@
 ---
 name: sessions
-description: "Lists your recent Claude Code and Codex sessions (title, tool, folder, last active, full id) so you can recover work after a crash, an accidental quit, or a closed editor. Finds remembered phrases in user and assistant messages. Use when the owner says 'my sessions', 'list sessions', 'I lost my sessions', 'recover sessions', 'what was I working on', or 'resume a session'."
+description: "Lists your recent Claude Code and Codex sessions (title, tool, folder, last active, full id) so you can recover work after a crash, an accidental quit, or a closed editor. Finds remembered phrases in user and assistant messages. Use when the owner says 'my sessions', 'list sessions', 'I lost my sessions', 'recover sessions', 'what was I working on', or 'resume a session'. Also handles sessions:help and sessions:version."
 trigger_patterns:
+  - "sessions:help"
+  - "sessions:version"
   - "my sessions"
   - "list sessions"
   - "recent sessions"
@@ -29,9 +31,14 @@ you still need. It is read-only: it never writes, resumes, or deletes anything.
 | `/sessions:list [days] [limit]` | Table of recent sessions. Defaults: last 7 days, 15 rows. |
 | `/sessions:search "phrase"` | Search recent conversations and show one matching passage per session. |
 | `/sessions:inspect <id>` | Last few messages of one session, and whether it died mid-task. |
-| `/sessions:help` | Usage. |
+| `/sessions:help` | Show commands and usage examples. |
+| `/sessions:version` | Print the installed skill version. |
 
-In Codex, invoke `$sessions` or ask in plain words ("list my sessions",
+In Codex, route `$sessions help` or `sessions:help` to [commands/help.md](commands/help.md).
+Route `$sessions version` or `sessions:version` to [commands/version.md](commands/version.md).
+These requests do not need a history search.
+
+For session recovery in Codex, invoke `$sessions` or ask in plain words ("list my sessions",
 "inspect session 01a1...") and run the scripts in section 3 yourself. The
 script and its output are identical in both tools.
 

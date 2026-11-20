@@ -1,6 +1,8 @@
 import json
 import os
+import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -29,3 +31,23 @@ def test_checkout_command_from_another_project(tmp_path):
     assert (row["id"], row["match_role"], row["cwd"]) == (session_id, "user", str(project))
     assert f"claude --resume {session_id}" in run("inspect", session_id).stdout
     assert run("inspect", "absent", check=False).returncode != 0
+
+
+def test_help_and_version_from_checkout_and_packaged_skill(tmp_path):
+    # A toolkit distribution can contain only this directory, with no upstream Git metadata.
+    bundle = tmp_path / "bundle"
+    shutil.copytree(ROOT / "skills" / "sessions", bundle)
+    index = tmp_path / "codex" / "session_index.jsonl"
+    index.mkdir(parents=True)  # Accessing session history would emit a diagnostic.
+    env = {**os.environ, "CODEX_HOME": str(index.parent), "CLAUDE_CONFIG_DIR": str(tmp_path / "claude")}
+    release = json.loads((bundle / "scripts/settings.json").read_text())["version"]
+
+    def run(cmd, arg):
+        result = subprocess.run([*cmd, arg], cwd=tmp_path, env=env, text=True,
+                                capture_output=True, check=True)
+        assert not result.stderr
+        return result.stdout
+
+    for cmd in ([str(ROOT / "which-session")], [sys.executable, str(bundle / "scripts/sessions.py")]):
+        assert run(cmd, "help") == run(cmd, "--help")
+        assert run(cmd, "version") == run(cmd, "--version") == f"which-session {release}\n"

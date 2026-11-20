@@ -1,4 +1,4 @@
-# Which Session v0.1.0-rc.2
+# Which Session v0.1.0-rc.3
 
 Which Session finds local Claude Code and Codex conversations, searches for words you remember and prints the command to reopen a session in its original directory.
 
@@ -15,6 +15,7 @@ The installer uses links to the checkout. Pulling a new revision there updates t
 
 ## What to test
 
+- Look up the installed commands and version with `/sessions:help` and `/sessions:version` in Claude, `$sessions help` and `$sessions version` in Codex, or `which-session help` and `which-session --version` in the terminal.
 - Search for a phrase that appears inside a conversation. Inspect its ID, look at the recorded tool outcome and copy the resume command into your terminal.
 - The default list and search hide Codex worker sessions even when they copy their parent’s opening prompt and metadata. Use `--all` to include labeled workers. Independent sessions with the same topic stay visible.
 - Inspect a failed Codex command. A structured nonzero exit code directs you to the recorded error. A tool output without a reliable status leaves the outcome unknown.

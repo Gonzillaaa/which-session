@@ -30,7 +30,13 @@ From the checkout, run:
 python3 install.py
 ```
 
-The installer links `which-session` into `~/.local/bin` and registers the `sessions` skill in Codex and Claude Code. It also registers the Claude `/sessions:list`, `/sessions:search`, `/sessions:inspect` and `/sessions:help` commands. New agent sessions can discover the skill. In Codex, invoke `$sessions` or ask it to find a conversation.
+The installer links `which-session` into `~/.local/bin` and registers the `sessions` skill in Codex and Claude Code. It also registers the Claude `/sessions:list`, `/sessions:search`, `/sessions:inspect`, `/sessions:help` and `/sessions:version` commands. New agent sessions can discover the skill. In Codex, invoke `$sessions` or ask it to find a conversation.
+
+| Where | Help | Installed version |
+| --- | --- | --- |
+| Terminal | `which-session help` or `which-session --help` | `which-session version` or `which-session --version` |
+| Claude Code | `/sessions:help` | `/sessions:version` |
+| Codex | `$sessions help` | `$sessions version` |
 
 Keep the checkout in place. Changes to it reach your installed commands immediately. If the shell cannot find `which-session`, run `export PATH="$HOME/.local/bin:$PATH"` and add that line to your shell startup file. You can choose an existing directory on your PATH with `python3 install.py --bin-dir DIRECTORY`. The original checkout command `./sessions` remains an alias.
 

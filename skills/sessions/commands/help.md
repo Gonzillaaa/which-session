@@ -4,10 +4,14 @@ description: "Usage for the sessions skill."
 
 # /sessions:help
 
-- `/sessions:list [days] [limit]`: recent sessions as a table. Defaults 7 days, 15 rows.
-- `/sessions:search "phrase"`: matching passages from recent conversations, newest match first.
-- `/sessions:inspect <id>`: last messages of one session, and whether it died mid-task.
+- `/sessions:list [days] [limit]` lists recent sessions. The default is 15 rows from the past 7 days.
+- `/sessions:search "phrase"` finds matching passages, newest first.
+- `/sessions:inspect <id>` shows the last exchanges, tool outcomes and next step.
+- `/sessions:help` shows these commands.
+- `/sessions:version` prints the installed version.
 
-Examples: "my last 4 sessions", "sessions this week", "sessions in myproject".
+In Codex, use `$sessions help` or `$sessions version`. In a terminal, use `which-session help` or `which-session --version`.
+
+For example, ask for “my last 4 sessions” or “sessions this week”.
 Inspection prints the next step and, when the original session can be identified, its resume command. If multiple transcripts share an ID, use the printed `--file` choices to inspect a particular copy.
 Add `--source claude` or `--source codex` to list one tool only.

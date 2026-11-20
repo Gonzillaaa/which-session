@@ -292,9 +292,11 @@ def positive(value):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="which-session", description=__doc__)
+    version = f"{parser.prog} {SETTINGS['version']}"
+    parser.add_argument("--version", action="version", version=version)
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("list", "search"):
-        command = sub.add_parser(name)
+    for name, summary in (("list", "List recent sessions"), ("search", "Find a remembered phrase")):
+        command = sub.add_parser(name, help=summary)
         if name == "search":
             command.add_argument("phrase", help="literal phrase in a user or assistant message")
         command.add_argument("--days", type=float, default=SETTINGS["days"])
@@ -305,12 +307,20 @@ def main(argv=None):
         command.add_argument("--source", choices=["claude", "codex", "all"], default="all")
         command.add_argument("--json", action="store_true")
         command.set_defaults(fn=cmd_list)
-    tail = sub.add_parser("inspect", aliases=["tail"])
+    tail = sub.add_parser("inspect", aliases=["tail"], help="Inspect one session and see how to resume it")
     tail.add_argument("id")
     tail.add_argument("--file", help="select an exact discovered transcript path when the ID matches several copies")
     tail.add_argument("--n", type=positive, default=SETTINGS["turns"])
     tail.set_defaults(fn=cmd_tail)
+    sub.add_parser("help", help="Show available commands")
+    sub.add_parser("version", help="Show the installed version")
     args = parser.parse_args(argv)
+    if args.cmd == "help":
+        parser.print_help()
+        return 0
+    if args.cmd == "version":
+        print(version)
+        return 0
     if hasattr(args, "days") and (not math.isfinite(args.days) or args.days < 0):
         parser.error("--days must be a finite, nonnegative number")
     if hasattr(args, "phrase") and not args.phrase.strip():
