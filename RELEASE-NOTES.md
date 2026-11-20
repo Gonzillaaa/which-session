@@ -1,4 +1,4 @@
-# Which Session v0.1.0 release candidate
+# Which Session v0.1.0-rc.2
 
 Which Session finds local Claude Code and Codex conversations, searches for words you remember and prints the command to reopen a session in its original directory.
 
