@@ -1,11 +1,11 @@
 """Read native transcripts once, keeping only the evidence needed for this request."""
 from __future__ import annotations
 
+import json
+import re
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-import json
-import re
 
 TITLES = {"custom-title": ("customTitle", 3), "ai-title": ("aiTitle", 2), "summary": ("summary", 1)}
 WRAPPER = re.compile(
@@ -81,7 +81,7 @@ def action(name, args):
     if tool == "apply_patch":
         patch = args.get("patch", args.get("input", "")) if isinstance(args, dict) else args
         if isinstance(patch, str):
-            targets = re.findall(r"^\*\*\* (?:Add File|Update File|Delete File|Move to): ([^\r\n]+)", patch, re.M)
+            targets = re.findall(r"^\*\*\* (?:Add File|Update File|Delete File|Move to): ([^\r\n]+)", patch, re.MULTILINE)
     elif isinstance(args, dict) and tool in {"write", "edit", "multiedit", "notebookedit", "read"}:
         path = args.get("file_path") or args.get("notebook_path")
         if isinstance(path, str):

@@ -39,7 +39,7 @@ def sample(request, tmp_path, monkeypatch):
         path.write_text(json.dumps({"type": "session_meta", "payload": {"id": SID, "cwd": str(cwd)}}) + "\n")
 
     def cli(*args, ok=True):
-        result = subprocess.run([sys.executable, str(SCRIPT), *args], text=True, capture_output=True)
+        result = subprocess.run([sys.executable, str(SCRIPT), *args], text=True, capture_output=True, check=False)
         assert (result.returncode == 0) == ok, result.stderr
         return result.stdout + result.stderr
 
@@ -47,7 +47,7 @@ def sample(request, tmp_path, monkeypatch):
 
 
 def test_activity_uses_latest_conversation_time_and_never_fresh_mtime(sample):
-    agent, path, cwd, emit, cli = sample
+    _agent, path, _cwd, emit, cli = sample
     emit("user", "old work", 30)
     assert json.loads(cli("list", "--days", "1", "--json")) == []
     emit("assistant", "current reply")
@@ -59,7 +59,7 @@ def test_activity_uses_latest_conversation_time_and_never_fresh_mtime(sample):
 
 
 def test_undated_activity_is_explicit(sample):
-    agent, path, cwd, emit, cli = sample
+    _agent, _path, _cwd, emit, cli = sample
     emit("user", "legacy message", stamp=False)
     assert json.loads(cli("list", "--json")) == []
     row, = json.loads(cli("list", "--all", "--json"))
@@ -68,7 +68,7 @@ def test_undated_activity_is_explicit(sample):
 
 
 def test_phrase_search_scope_excerpt_and_role(sample):
-    agent, path, cwd, emit, cli = sample
+    agent, _path, cwd, emit, cli = sample
     emit("user", "unrelated title")
     emit("assistant", "long introduction " * 20 + "Email\n  draft is ready.")
     emit("user", "an older EMAIL DRAFT", 20)
@@ -84,7 +84,7 @@ def test_phrase_search_scope_excerpt_and_role(sample):
 
 
 def test_inspection_names_outstanding_target_and_quotes_resume(sample):
-    agent, path, cwd, emit, cli = sample
+    agent, _path, cwd, emit, cli = sample
     emit("user", "update the file")
     if agent == "claude":
         emit("assistant", [{"type": "tool_use", "id": "t", "name": "Write", "input": {"file_path": "draft notes.md", "content": "PRIVATE_PAYLOAD"}}])
@@ -104,7 +104,7 @@ def test_inspection_names_outstanding_target_and_quotes_resume(sample):
 
 
 def test_literal_search_and_activity_ignore_nonconversation_events(sample):
-    agent, path, cwd, emit, cli = sample
+    agent, path, _cwd, emit, cli = sample
     emit("user", "Test a.b on the old build", days=30)
     emit("assistant", "Test aXb on the old build", days=29)
     with path.open("a") as stream:
@@ -118,7 +118,7 @@ def test_literal_search_and_activity_ignore_nonconversation_events(sample):
 
 
 def test_inspect_undeclared_directory_and_ambiguous_id(sample):
-    agent, path, cwd, emit, cli = sample
+    _agent, path, cwd, emit, cli = sample
     emit("user", "test")
     second = SID[:-1] + "6"
     duplicate = path.with_name(path.name.replace(SID, second))

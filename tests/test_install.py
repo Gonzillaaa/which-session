@@ -1,11 +1,10 @@
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "sessions"
@@ -106,9 +105,9 @@ def test_uninstall_keeps_a_replaced_destination(install_env):
 
 def test_readme_quickstart_runs_with_empty_histories(install_env, tmp_path):
     section = (ROOT / "README.md").read_text().split("## Try it", 1)[1].split("\n## ", 1)[0]
-    blocks = re.findall(r"```sh\n(.*?)\n```", section, re.S)
+    blocks = re.findall(r"```sh\n(.*?)\n```", section, re.DOTALL)
     assert blocks
     for block in blocks:
         result = subprocess.run(["sh", "-ec", block], input="", cwd=ROOT,
-                                env=install_env, capture_output=True, text=True)
+                                env=install_env, capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr

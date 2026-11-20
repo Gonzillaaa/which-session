@@ -1,13 +1,13 @@
 """Show a phrase lookup and two interrupted-work scenarios using synthetic history."""
 import argparse
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import shlex
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 
 CLI = Path(__file__).resolve().parents[1] / "which-session"
 CLAUDE_ID = "11111111-1111-4111-8111-111111111111"

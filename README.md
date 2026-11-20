@@ -79,8 +79,8 @@ A list includes project names and full session IDs. A search adds matching text.
 ## Development and feedback
 
 ```sh
-uv run --with pytest pytest -q
-uvx ruff check . which-session
+uv run --with-requirements requirements-dev.txt pytest -q
+uv run --with-requirements requirements-dev.txt ruff check . which-session
 ```
 
 For a bug report, include your OS, agent version, `which-session --version`, the command and the result you expected. A synthetic example helps others reproduce it. [Report an issue](https://github.com/Gonzillaaa/which-session/issues) · [MIT license](LICENSE)

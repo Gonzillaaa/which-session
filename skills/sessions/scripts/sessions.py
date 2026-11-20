@@ -37,7 +37,7 @@ def owner_tz():
         return None
     try:
         out = subprocess.run([sys.executable, "-I", str(script), "today"], capture_output=True,
-                             text=True, timeout=10, cwd=vault)
+                             text=True, timeout=10, cwd=vault, check=True)
         info = json.loads(out.stdout)
         return None if info.get("timezone_fallback") else ZoneInfo(info["timezone"])
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
@@ -56,7 +56,7 @@ def clean(text, width):
 def ps_text():
     try:
         return subprocess.run(["ps", "-eo", "command="], capture_output=True, text=True,
-                              timeout=SETTINGS["process_timeout_seconds"]).stdout
+                              timeout=SETTINGS["process_timeout_seconds"], check=True).stdout
     except (OSError, subprocess.SubprocessError):
         return ""
 
@@ -160,10 +160,13 @@ def cmd_list(args):
         if args.folder.lower() not in (log.cwd or folder).lower():
             continue
         title = (names.get(sid) if agent == "codex" else None) or log.title
-        row = dict(tool=agent, id=sid, title=title, folder=folder, cwd=log.cwd, branch=log.branch,
-                   background=log.background, parent_id=log.parent_id or None,
-                   last_user=log.last_user, last_active=fmt_time(log.active), activity_epoch=log.active,
-                   mtime=stat.st_mtime, size_kb=stat.st_size // 1024, live=(agent, sid) in live, path=str(path))
+        row = {
+            "tool": agent, "id": sid, "title": title, "folder": folder, "cwd": log.cwd,
+            "branch": log.branch, "background": log.background, "parent_id": log.parent_id or None,
+            "last_user": log.last_user, "last_active": fmt_time(log.active), "activity_epoch": log.active,
+            "mtime": stat.st_mtime, "size_kb": stat.st_size // 1024, "live": (agent, sid) in live,
+            "path": str(path),
+        }
         if pattern:
             row.update(match=log.match, match_role=log.match_role, match_epoch=log.match_time)
         rows.append(row)

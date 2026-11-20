@@ -24,7 +24,7 @@ jobs:
         run: |
           uv python install "$PYTHON_VERSION"
           uv venv --managed-python --python "$PYTHON_VERSION" "$RUNNER_TEMP/which-session-venv"
-          uv pip install --python "$RUNNER_TEMP/which-session-venv/bin/python" pytest ruff
+          uv pip install --python "$RUNNER_TEMP/which-session-venv/bin/python" -r requirements-dev.txt
           echo "$RUNNER_TEMP/which-session-venv/bin" >> "$GITHUB_PATH"
       - name: Validate the checkout
         run: |

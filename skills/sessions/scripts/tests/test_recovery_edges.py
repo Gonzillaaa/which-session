@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 SCRIPT = Path(__file__).resolve().parents[1] / "sessions.py"
 CODEX_ID = "11111111-1111-4111-8111-111111111111"
 CLAUDE_ID = "22222222-2222-4222-8222-222222222222"
@@ -20,7 +19,7 @@ def append(path, kind, **fields):
 
 
 def run(*args, ok=True):
-    result = subprocess.run([sys.executable, str(SCRIPT), *args], text=True, capture_output=True)
+    result = subprocess.run([sys.executable, str(SCRIPT), *args], text=True, capture_output=True, check=False)
     assert (result.returncode == 0) == ok, result.stdout + result.stderr
     return result
 
