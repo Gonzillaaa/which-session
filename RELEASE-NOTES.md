@@ -1,29 +1,25 @@
-# Which Session v0.1.0-rc.3
+# Which Session 0.1.0
 
-Which Session finds local Claude Code and Codex conversations, searches for words you remember and prints the command to reopen a session in its original directory.
+Find a Claude Code or Codex conversation from a phrase you remember. Inspect the last exchange, see whether an interrupted tool call recorded a result, and copy the command to reopen the conversation in its original directory.
 
-## Try the candidate
+## Try it
 
-In a checkout or extracted source archive on macOS or Linux, run:
+On macOS or Linux with Python 3.9 or newer, use the following commands. The demo creates two disposable histories.
 
 ```sh
-python3 install.py
-which-session list --limit 5
+git clone --branch v0.1.0 https://github.com/Gonzillaaa/which-session.git
+cd which-session
+python3 examples/demo.py
 ```
 
-The installer uses links to the checkout. Pulling a new revision there updates the installed CLI and agent skill. Keep the checkout in place and start a fresh agent chat to pick up changed skill instructions. For a disposable test of an interrupted Claude edit and a failed Codex command, run `python3 examples/demo.py`. [Quickstart](README.md) · [Demo](examples/README.md)
+To install the terminal command and both agent skills for your account, run `python3 install.py` from a checkout you will keep. Run `which-session --version` to confirm the install. In a fresh agent session, use `/sessions:help` in Claude Code or `$sessions help` in Codex.
 
-## What to test
+## What you can recover
 
-- Look up the installed commands and version with `/sessions:help` and `/sessions:version` in Claude, `$sessions help` and `$sessions version` in Codex, or `which-session help` and `which-session --version` in the terminal.
-- Search for a phrase that appears inside a conversation. Inspect its ID, look at the recorded tool outcome and copy the resume command into your terminal.
-- The default list and search hide Codex worker sessions even when they copy their parent’s opening prompt and metadata. Use `--all` to include labeled workers. Independent sessions with the same topic stay visible.
-- Inspect a failed Codex command. A structured nonzero exit code directs you to the recorded error. A tool output without a reliable status leaves the outcome unknown.
-- If two restored transcripts share an ID, use one of the printed file choices. You can read either copy. The native client selects by ID, so the CLI withholds a resume command when that ID maps to multiple files for that host.
-- Sessions remain discoverable if the optional Codex title index is missing or unreadable. An unreadable index produces a warning on stderr.
+- List sessions by their last recorded activity, or search for a phrase in user and assistant messages. Background Codex workers are hidden by default. Use `--all` to include them.
+- Inspect a session to see file targets, available tool results, and what to do next. If a call ended without a recorded result, inspect its target before retrying.
+- Distinguish restored copies with the same ID using the printed file choices. If the native client cannot tell two copies apart, the CLI explains the ambiguity.
 
-## Compatibility and known limitations
+Which Session reads local Claude project transcripts and dated Codex rollouts. Cloud-only conversations and separately archived rollouts fall outside that scope. Terminal searches run locally. When a hosted agent shows an excerpt, it becomes part of that agent conversation.
 
-Python 3.9 or later. Native resume was rehearsed on macOS with Claude Code 2.1.303 and Codex CLI 0.171.0 using disposable conversations and a local test model. Lookup uses locally stored Claude project transcripts and dated Codex rollouts. Archived or cloud-only histories outside those directories are outside this version’s scope. A session can be open without a visible process that names its ID.
-
-For feedback, give the maintainer the candidate revision, OS, host version, exact command and what you expected. A synthetic example is enough to demonstrate most problems. The [demo guide](examples/README.md) lists the private fields that may appear in real output.
+For a bug report, include the OS, host version, command and a synthetic example. [Report an issue](https://github.com/Gonzillaaa/which-session/issues) · [Quickstart](https://github.com/Gonzillaaa/which-session/tree/v0.1.0#readme)
