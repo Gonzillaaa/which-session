@@ -1,0 +1,40 @@
+# Which Session release checklist
+
+**Assessment · 20 November 2026 · commit `e498bbd`.** Ready for a maintainer-led preview. Hold the first public release until inspection handles a recorded Codex failure correctly and a new user can follow the quickstart unaided. The core workflows already run on macOS and Linux.
+
+The proposed first release is **v0.1.0**, distributed as a tagged Git checkout with a CLI and optional agent skill. The version and distribution method are proposals. Each item below includes the result that would close it.
+
+## What already works
+
+| Check | Evidence from a fresh clone |
+| --- | --- |
+| Regression suite | All 31 pytest cases passed on macOS arm64 with Python 3.11. Ruff passed for the Python files and the extensionless launcher. |
+| Cross-platform CLI | Synthetic Claude and Codex histories passed list, phrase search and inspect on macOS with Python 3.9.6 and 3.14.6, and on Debian Linux arm64 with Python 3.12.14. On Linux, a shell ran each printed resume command against a stub and passed the expected directory, flag and UUID. A real interactive resume remains to be tested. |
+| Agent discovery | With isolated configuration directories, Codex CLI 0.171.0 reported the skill enabled. Claude Code 2.1.303 registered `sessions` and the four `sessions:*` commands. These checks covered registration. They did not exercise an agent-led recovery. |
+| Read-only operation and packaging | The synthetic transcript hashes matched before and after the workflow. The checked-out launcher is executable, the runtime uses the Python standard library, and the MIT license is tracked. |
+| Distribution today | The audited repository had two local commits, no Git remote, no version tag and no CI workflow. The intended GitHub repository was absent when checked with the owner’s account. |
+
+## Fix before handing the build to testers
+
+- [ ] **1. Make a failed Codex tool call visible in the next step.** A synthetic command had a matching `exec_command_end` event with exit code 1 and a recorded output. Inspection said “result recorded” and directed the user back to the last request. Correlate available structured outcome data with the call ID. **Done when** tests distinguish failure, success, unknown outcome and an outstanding call. The failed case directs the user to review the error, and a result with no reliable status stays unknown. Start in [transcript.py](skills/sessions/scripts/transcript.py) and the [recovery workflow tests](skills/sessions/scripts/tests/test_recovery_workflow.py).
+- [ ] **2. Keep recovery working when optional Codex titles are unreadable.** Making `session_index.jsonl` unreadable caused the default list to exit with a Python traceback even though the Claude history was readable. The Claude-only listing succeeded. **Done when** list, search and Codex inspection return usable transcript evidence without the optional titles, print one useful diagnostic to stderr and preserve machine-readable JSON on stdout. Cover both a missing index and an unreadable one in [sessions.py](skills/sessions/scripts/sessions.py).
+- [ ] **3. Resolve identical full IDs.** Two restored Claude transcripts with the same UUID produced “give a longer prefix” even with the entire UUID supplied. **Done when** inspection shows enough information to distinguish the copies and gives an actionable way to inspect the intended one. Test identical full IDs separately from a short prefix shared by different IDs.
+- [ ] **4. Make the first run copyable and the installation repeatable.** The quickstart’s angle-bracket placeholder fails shell parsing. Both host install snippets succeed once and exit with “File exists” on the second run. Choose the public executable name. My recommendation is `which-session` for the CLI and `$sessions` for the agent shortcut. **Done when** the [README](README.md) takes someone from clone to a real result, shows what to do with empty history, gives a copyable inspection example, and explains uninstalling the links. Repeating installation should recognize the right link and identify a conflicting destination without replacing it.
+
+## Validate the release candidate
+
+- [ ] **5. Automate the checks that passed locally.** Run pytest, Ruff and a clean-checkout CLI smoke test on macOS and Linux. Exercise the documented Python minimum and a current supported interpreter. Include a working directory with spaces, an interrupted edit, an explicitly failed call and both hosts’ resume arguments. **Done when** the candidate commit has passing CI results, and a regression in the printed command makes the smoke test fail.
+- [ ] **6. Rehearse recovery in the actual clients.** Use a disposable project and a harmless native conversation in each client. Close the client, find a remembered phrase, inspect the session and execute the printed command. Check that the original conversation, project and marker phrase are present. Try the README with a developer unfamiliar with the project and record where they get stuck. **Done when** there is a dated pass for each host with its version and any onboarding corrections are retested.
+- [ ] **7. Verify the public example and its privacy wording.** Use synthetic conversations to show a normal lookup and an interrupted edit. Show what ordinary output and `--json` reveal, including excerpts, full paths, IDs and the last user message where applicable. Explain that excerpts shown in a hosted agent enter that conversation. **Done when** the published example is reproducible from disposable data and the release files and screenshots have been checked for private names, paths and transcripts.
+- [ ] **8. State the supported history scope.** The current readers scan Claude project logs and dated Codex rollout directories. The default list hides background, temporary and undated sessions. Document what to try when an expected session is missing, including `--days`, `--all` and the two configuration-directory variables. **Done when** a tester can recover a deliberately hidden fixture using the guide or tell that its storage location is outside the supported scope.
+
+## Cut the release
+
+- [ ] **9. Establish the private staging repository.** Once the owner approves hosting, create the private repository, attach `origin`, and push the reviewed history. **Done when** the owner can clone it into an empty directory and CI runs on the same commit being considered for release.
+- [ ] **10. Tag, verify and publish.** Write short release notes with install instructions, tested client versions, known limitations and where to report a problem. Tag the tested commit, then unpack its source archive and repeat the quickstart. Make the repository and release public when the owner chooses to launch. **Done when** a signed-out reader can reach the release page, obtain the tagged files and follow the published instructions. Point the downstream toolkit bundle at the verified skill tree for that release.
+
+**Release decision.** Hand a private candidate to testers after items 1–4 pass. Publish after items 5–10 have evidence against the same candidate, rerunning affected checks after fixes.
+
+## Follow-up after v0.1.0
+
+A warm-cache macOS benchmark over 96 synthetic files, 24,576 turns and 26.7 MiB took a median **0.20 s** to list one result and **0.34 s** to search for an absent phrase over three runs. The implementation scans the histories on each invocation. Measure a larger corpus before committing to an index. Marketplace plugins, a package-manager installer and additional agents can follow demonstrated demand.
