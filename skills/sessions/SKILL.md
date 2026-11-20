@@ -16,10 +16,9 @@ tier: extension
 
 ## 1. Role
 
-Claude Code keeps every conversation as a transcript under
-`~/.claude/projects/<folder>/<id>.jsonl`; Codex keeps its threads under
-`~/.codex/sessions/YYYY/MM/DD/rollout-*-<id>.jsonl`. When an editor or terminal
-closes, the window is gone but the transcript is not. This skill lists those transcripts as
+Claude Code stores local project transcripts under `~/.claude/projects/<folder>/<id>.jsonl`.
+This skill also reads file-backed Codex rollouts under `~/.codex/sessions/YYYY/MM/DD/rollout-*-<id>.jsonl`.
+The corresponding overrides are `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. Recovery requires a saved transcript in one of those locations. This skill lists those transcripts as
 a table and checks whether a session died mid-task, so you can reopen the ones
 you still need. It is read-only: it never writes, resumes, or deletes anything.
 
@@ -32,7 +31,7 @@ you still need. It is read-only: it never writes, resumes, or deletes anything.
 | `/sessions:inspect <id>` | Last few messages of one session, and whether it died mid-task. |
 | `/sessions:help` | Usage. |
 
-Codex has no slash commands: in Codex, ask in plain words ("list my sessions",
+In Codex, invoke `$sessions` or ask in plain words ("list my sessions",
 "inspect session 01a1...") and run the scripts in section 3 yourself. The
 script and its output are identical in both tools.
 
