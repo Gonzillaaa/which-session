@@ -1,23 +1,47 @@
 # Which Session
 
-Find the Claude Code or Codex conversation you remember and reopen it where you left off. Search across both tools by a phrase you typed, inspect the last recorded action, and copy the resume command for the original project.
+Find a Claude Code or Codex conversation by a phrase you remember, see where it stopped, and get the command to reopen it in its original project. Use the `sessions` skill inside either agent or run `which-session` in your terminal. All three search the same local histories.
 
 ![Excerpt from a synthetic Codex session. Searching for “retry policy” finds Backoff tests. Inspecting it shows that a command exited with code 1 and suggests reviewing the recorded error before retrying.](examples/recovery-preview.png)
 
-## Get the code
+## Install the skill and CLI
 
-Which Session runs on macOS and Linux with Python 3.9 or newer. It uses the Python standard library.
+On macOS or Linux with Python 3.9 or newer, clone the repository somewhere you plan to keep it. Run the installer once for both agents and the terminal.
 
 ```sh
 git clone https://github.com/Gonzillaaa/which-session.git
 cd which-session
+python3 install.py
 ```
 
-You can also download and extract the [latest release](https://github.com/Gonzillaaa/which-session/releases/latest).
+If you prefer a release archive, extract it to a permanent folder and run `python3 install.py` from that folder. The installer creates links back to these files, so edits and updates take effect in place. [Download the latest release](https://github.com/Gonzillaaa/which-session/releases/latest)
 
-## Try it
+| Interface | Default install location |
+| --- | --- |
+| Claude Code | `~/.claude/skills/sessions` for the skill and `~/.claude/commands/sessions/` for the slash commands |
+| Codex | `~/.codex/skills/sessions` for the skill |
+| Terminal | `~/.local/bin/which-session` |
 
-From the checkout or extracted folder, list recent conversations. Replace the quoted phrase with one you remember.
+If you use a custom agent directory, set `CLAUDE_CONFIG_DIR` or `CODEX_HOME` before installing. If your shell cannot find `which-session`, run `export PATH="$HOME/.local/bin:$PATH"` and add that line to your shell startup file for future terminals. You can also choose an existing directory on your PATH with `python3 install.py --bin-dir DIRECTORY`.
+
+To uninstall, run `python3 install.py --uninstall` from the same checkout with the same directory settings. It removes only links it created. You can rerun the installer, and it reports any conflicting destinations.
+
+## Use the skill in Claude Code or Codex
+
+Start a fresh chat after installation. In Claude Code, type the slash command in the chat input. In Codex, type `$sessions` followed by your request.
+
+| What you want to do | Claude Code | Codex |
+| --- | --- | --- |
+| List your last four sessions from the past week | `/sessions:list 7 4` | `$sessions list my last four sessions from the past week` |
+| Find a phrase from the past month | `/sessions:search "retry policy" --days 30` | `$sessions find "retry policy" from the past 30 days` |
+| See where a session stopped | `/sessions:inspect ID` | `$sessions inspect ID` |
+| Show usage or version | `/sessions:help` or `/sessions:version` | `$sessions help` or `$sessions version` |
+
+Replace `ID` with a full ID or a unique prefix from the results. Inspection shows the last recorded action and, when it can identify the original session and folder, prints the resume command. Run that command in your terminal when you want to reopen the conversation.
+
+## Try it in the terminal
+
+From the checkout or extracted folder, these commands work even before installation. After installation, use `which-session` from any folder. Replace the quoted phrase with one you remember.
 
 ```sh
 ./which-session list
@@ -39,25 +63,7 @@ If your history is empty, try the same workflow with two disposable sessions. Th
 python3 examples/demo.py
 ```
 
-## Install for your account
-
-To run `which-session` from any folder and use the `sessions` skill in both agents, keep the checkout in a permanent location and run:
-
-```sh
-python3 install.py
-```
-
-Start a fresh agent session to discover the skill.
-
-| | Search | Help | Version |
-| --- | --- | --- | --- |
-| Terminal | `which-session search "retry policy"` | `which-session help` | `which-session --version` |
-| Claude Code | `/sessions:search "retry policy"` | `/sessions:help` | `/sessions:version` |
-| Codex | `$sessions search "retry policy"` | `$sessions help` | `$sessions version` |
-
-The installer links the CLI into `~/.local/bin`. If your shell cannot find it, run `export PATH="$HOME/.local/bin:$PATH"` in this terminal. Add the same line to your shell startup file for future terminals. You can also install with `--bin-dir DIRECTORY` to choose a directory already on your PATH. Changes to the checkout reach the linked commands immediately.
-
-Run `python3 install.py --uninstall` from the same checkout to remove the links the installer created. Use the same bin and agent directories you chose at install time. Existing links and transcript files are preserved. The installer reports conflicting destinations and can be run again.
+For terminal usage or the installed version, run `which-session help` or `which-session --version`.
 
 ## Finding a missing session
 
@@ -75,6 +81,10 @@ Activity comes from recorded turns and tool events. Search matches literal phras
 The CLI reads transcripts locally without changing them. It looks for Claude Code project logs in `~/.claude/projects` and dated Codex rollouts in `~/.codex/sessions`. Set `CLAUDE_CONFIG_DIR` or `CODEX_HOME` for custom locations. Separately archived rollouts and cloud-only conversations are outside this search.
 
 A list includes project names and full session IDs. A search adds matching text. Inspection shows recent exchanges and paths. JSON output from list or search also includes the full transcript path, working directory and last user message. Excerpts you display inside a hosted agent become part of that conversation.
+
+## Why Python?
+
+Claude Code and Codex both write one JSON record per line, but they represent messages and tool results differently. To tell you whether an interrupted command actually failed, Which Session has to match the tool call to its result by ID. Python's standard library handles JSON parsing, timestamps and shell quoting for paths such as `Jane's project`. A shell script would need its own JSON handling or an extra tool such as `jq`. The CLI and both agent integrations reuse the same Python parser.
 
 ## Development and feedback
 
