@@ -233,17 +233,17 @@ def run(screen, curses, entries, preview, settings):
 def choose_session(entries, preview, settings):
     """Return the chosen raw session row, or None when selection is cancelled."""
     if not sys.stdin.isatty() or not sys.stdout.isatty():
-        raise PickerError("pick requires an interactive terminal for input and output. Use list or search here.")
+        raise PickerError("Keyboard browsing requires a terminal for input and output.")
     try:
         import curses
     except ImportError as exc:
-        raise PickerError("pick requires Python with curses support. Use list or search here.") from exc
+        raise PickerError("Keyboard browsing requires Python with curses support.") from exc
     try:
         curses.setupterm(fd=sys.stdout.fileno())
         if not curses.tigetstr("cup"):
-            raise PickerError("This terminal does not support cursor movement. Use list or search here.")
+            raise PickerError("This terminal does not support cursor movement.")
         return curses.wrapper(run, curses, entries, preview, settings)
     except KeyboardInterrupt:
         return None
     except curses.error as exc:
-        raise PickerError(f"Could not use the terminal for pick ({exc}). Use list or search here.") from exc
+        raise PickerError(f"Could not open the session browser ({exc}).") from exc

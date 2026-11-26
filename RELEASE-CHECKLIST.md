@@ -8,7 +8,7 @@ Use this checklist for each release. The packaged version, tag and source archiv
 - Run the hosted test matrix on the intended commit. It covers macOS and Linux, Python 3.9 and current Python, Ruff, the full test suite and a smoke test from the source archive. [Release checks](https://github.com/Gonzillaaa/which-session/actions/workflows/ci.yml)
 - Try the README from a clean checkout and isolated home. Run the synthetic demo, install twice, check the version, and uninstall. Confirm that pre-existing links and histories survive.
 - Rehearse search, inspect and native resume from a different working directory. Check an interrupted edit, a failed command, ambiguous IDs and a worker hidden in the default list.
-- In a terminal, expand a configured recurring job, preview an older run, and select it. Confirm inspection identifies that transcript and leaves the resume command for the user. Cancel a second picker and check that normal input is restored. Verify piped Markdown and JSON still expose individual transcripts.
+- Run `which-session list` in a terminal, expand a recurring job, preview an older run, and select it. Confirm inspection identifies that transcript and leaves the resume command for the user. Press Esc on a second invocation and check that normal input is restored. Verify `list --plain` prints a table and exits, and that piped Markdown and JSON expose individual transcripts.
 - Reproduce the public visual from disposable inputs and check the release files for private paths, IDs, excerpts and email addresses.
 
 ## Publishing

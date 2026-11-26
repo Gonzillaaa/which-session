@@ -22,7 +22,7 @@ demo_dir="$(mktemp -d)/which-session"
 python3 examples/demo.py --keep "$demo_dir"
 (
   export CLAUDE_CONFIG_DIR="$demo_dir/claude" CODEX_HOME="$demo_dir/codex"
-  ./which-session list --all
+  ./which-session list --plain --all
   ./which-session search "retry policy" --all --json
   ./which-session inspect 11111111-1111-4111-8111-111111111111
 )

@@ -38,7 +38,7 @@ def keyboard_run(command, keys, *, size=(24, 100), env=None):
     with os.fdopen(master, "r+b", buffering=0), os.fdopen(slave, "r+b", buffering=0):
         original = termios.tcgetattr(slave)
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", *size, 0, 0))
-        child_env = dict(os.environ, TERM="xterm-256color", **(env or {}))
+        child_env = {**os.environ, "TERM": "xterm-256color", **(env or {})}
         with subprocess.Popen(command, cwd=SCRIPTS, stdin=slave, stdout=slave, stderr=slave, env=child_env) as child:
             output = bytearray()
             deadline = time.monotonic() + 10
@@ -146,7 +146,8 @@ def test_cancel_from_empty_results_restores_small_terminal():
     assert b"\x1b]2;UNTRUSTED" not in output
 
 
-def test_pick_inspects_selected_copy_from_real_transcripts(tmp_path):
+@pytest.mark.parametrize("command", ["list", "pick"])
+def test_list_inspects_selected_copy_from_real_transcripts(tmp_path, command):
     session_id = "11111111-2222-4333-8444-555555555555"
     claude = tmp_path / "claude"
     for project, phrase in (("planes", "First project"), ("boats", "Selected restore")):
@@ -155,11 +156,34 @@ def test_pick_inspects_selected_copy_from_real_transcripts(tmp_path):
         record = {"type": "user", "cwd": f"/work/{project}", "message": {"content": phrase},
                   "timestamp": datetime.now(timezone.utc).isoformat()}
         (folder / f"{session_id}.jsonl").write_text(json.dumps(record) + "\n")
-    output = keyboard_run([*CLI, "pick", "--all"], b"boats\r",
+    output = keyboard_run([*CLI, command, "--all"], b"boats\r",
                           env={"CLAUDE_CONFIG_DIR": str(claude), "CODEX_HOME": str(tmp_path / "codex")})
     inspection = output.split(b"id: " + session_id.encode() + b"\r\n")[-1]
     assert b"folder: /work/boats" in inspection and b"title: Selected restore" in inspection
     assert b"cannot specify this file" in inspection and b"claude --resume" not in inspection
+
+
+def test_list_browses_past_the_print_limit_and_can_still_print_a_table(tmp_path):
+    env = {"CLAUDE_CONFIG_DIR": str(tmp_path / "claude"), "CODEX_HOME": str(tmp_path / "codex")}
+    project = tmp_path / "claude/projects/demo"
+    project.mkdir(parents=True)
+    limit = json.loads((SCRIPTS / "settings.json").read_text())["limit"]
+    stamp = datetime.now(timezone.utc).isoformat()
+    for i in range(limit + 1):
+        record = {"type": "user", "cwd": "/work/demo", "timestamp": stamp,
+                  "message": {"content": f"Session number {i}"}}
+        (project / f"00000000-0000-4000-8000-{i:012d}.jsonl").write_text(json.dumps(record) + "\n")
+
+    # Equal timestamps sort by descending ID, putting session zero beyond the printed limit.
+    result = keyboard_run([*CLI, "list"], b"number 0\r", env=env)
+    assert b"title: Session number 0" in result
+    limited = keyboard_run([*CLI, "list", "--limit", "1"], b"number 0\x1b", env=env)
+    assert b"No matches" in limited
+    for args, term in [(["--plain"], "xterm-256color"), ([], "dumb"), ([], "no-such-terminal")]:
+        output = keyboard_run([*CLI, "list", *args], [], env={**env, "TERM": term})
+        assert f"{limit} of {limit + 1} sessions".encode() in output and b"Filter:" not in output
+    rows = json.loads(keyboard_run([*CLI, "list", "--json"], [], env=env))
+    assert len(rows) == limit and rows[0]["title"] == f"Session number {limit}"
 
 
 def test_preview_refreshes_when_the_selected_transcript_changes_or_disappears(tmp_path):
@@ -182,6 +206,6 @@ def test_preview_refreshes_when_the_selected_transcript_changes_or_disappears(tm
     append("Initial request")
     steps = [(b"Last request: Initial", lambda: append("Ship the planes")),
              (b"Ship the planes", remove_transcript), (b"Cannot read transcript:", b"\x1b")]
-    output = keyboard_run([*CLI, "pick", "--all"], steps,
+    output = keyboard_run([*CLI, "list", "--all"], steps,
                           env={"CLAUDE_CONFIG_DIR": str(claude), "CODEX_HOME": str(tmp_path / "codex")})
     assert b"Cannot read transcript:" in output

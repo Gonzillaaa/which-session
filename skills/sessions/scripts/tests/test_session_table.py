@@ -41,7 +41,7 @@ def terminal_output(columns, *args):
     with os.fdopen(master, "rb", buffering=0) as screen:
         with os.fdopen(slave, "wb") as output:
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, columns, 0, 0))
-            process = subprocess.Popen([*CLI, *args], stdout=output)
+            process = subprocess.Popen([*CLI, *args], stdin=subprocess.DEVNULL, stdout=output)
         chunks = []
         with process:
             try:
@@ -110,10 +110,12 @@ def test_terminal_groups_runs_before_limiting_but_flat_views_keep_each_session(t
     assert len(rows) == 4 and all("members" not in row and "job" not in row for row in rows)
 
 
-def test_redirected_picker_explains_how_to_use_a_noninteractive_command():
-    result = subprocess.run([*CLI, "pick"], stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
-    assert result.returncode != 0 and not result.stdout
-    assert "terminal" in result.stderr and "which-session list" in result.stderr
+def test_redirected_alias_prints_the_same_markdown_as_list():
+    def redirected(command):
+        return subprocess.check_output([*CLI, command], stdin=subprocess.DEVNULL, text=True)
+
+    markdown = redirected("pick")
+    assert markdown == redirected("list") and all(f"`{sid}`" in markdown for sid in IDS)
 
 
 def test_inspection_prints_terminal_safe_metadata(tmp_path):

@@ -44,13 +44,13 @@ script and its output are identical in both tools.
 
 ## 3. How to run it
 
-If the global CLI is installed, use `which-session list`, `which-session search` or
+If the global CLI is installed, use `which-session list --plain --ungrouped`, `which-session search` or
 `which-session inspect`. Otherwise use the full path to `scripts/sessions.py` inside the skill directory supplied by
 the agent. Keep the caller's working directory so `--here` filters the right project.
 The script uses the Python standard library. For example, with the global Codex install:
 
 ```bash
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" list --days 7 --limit 15
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" list --plain --ungrouped --days 7 --limit 15
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" search "email draft" --days 30
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" tail <id-or-prefix>
 ```
@@ -67,7 +67,7 @@ It accepts the same filters as list. Both commands default to seven days.
 Plain requests map directly: "my last 4 sessions" is `--limit 4`; "this week"
 is `--days 7`; "yesterday's work in myproject" is `--days 2 --folder myproject`.
 
-For interactive browsing, a user can run `which-session pick` in their own terminal, type a title or project, preview the selected conversation, and press Enter to inspect it. For agent requests, use the noninteractive `list`, `search` and `inspect` commands. Captured Markdown and JSON include individual transcripts. The terminal list groups configured recurring jobs by agent and project. Use `list --ungrouped` to see each run in a terminal.
+In their own terminal, users can run `which-session list`, type a title or project, preview the selected conversation, and press Enter to inspect it. The browser groups recurring jobs by agent and project. For agent requests, `--plain --ungrouped` prints one row per transcript even when the shell provides a terminal. Piped Markdown and JSON always include individual runs.
 
 ## 4. Reading the table
 

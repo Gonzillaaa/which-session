@@ -48,7 +48,9 @@ From the checkout or extracted folder, these commands work even before installat
 ./which-session search "retry policy" --days 30
 ```
 
-In a terminal, columns align to the window width. In a narrow window, each session’s full ID appears on its own line for copying. Piping the output produces a Markdown table. Use `--json` for scripts.
+`list` opens a keyboard browser in your terminal. Type part of a title or folder to filter, use **↑** and **↓** to preview a session, then press **Enter** to inspect it or **Esc** to return to your shell.
+
+For a table you can copy, run `which-session list --plain`. The columns fit your terminal, with full IDs on their own lines in narrow windows. Piping `list` produces Markdown automatically. Use `which-session list --json` for scripts.
 
 To inspect a match, paste its full ID or a unique prefix at the prompt. If the transcript identifies a single original session and folder, inspection prints the command to reopen it. You choose when to run it.
 
@@ -67,19 +69,17 @@ python3 examples/demo.py
 
 For terminal usage or the installed version, run `which-session help` or `which-session --version`.
 
-## Pick a session with the keyboard
+## Browse recent sessions
 
-Run `which-session pick` in a terminal, or `which-session pick --here` to browse the current project. The picker starts with the past seven days. Type part of a title or project path to filter, then use the arrow keys to move. The preview shows the last user request, the last recorded tool call and its outcome, the full session ID, and available resume instructions.
+`which-session list` shows the past seven days, most recently active first. Use `which-session list --here` to start in the current project. The preview shows the selected conversation’s last user request, last recorded tool call and outcome, full session ID, and available resume instructions. The earlier `pick` command is an alias for `list`.
 
 On narrow screens, the preview heading shows the selected session’s details that don’t fit in the list. Use **Page Up** and **Page Down** to scroll a long preview.
 
-Press **Enter** on a session to print its inspection and return to your shell. Press **Esc** to leave the picker. To reopen a conversation, run the resume command from its inspection.
-
 ### Recurring jobs
 
-The terminal list and picker combine repeated runs of a known job in the same project and agent. For example, six heartbeat runs appear as **Heartbeat runner · 6 runs** at the position of the latest run. The group's time and ID belong to that run. In the picker, **Right** or **Enter** expands a group so you can select an older run. **Left** collapses it.
+In the terminal, `list` combines repeated runs of a known job in the same project and agent. For example, six heartbeat runs appear as **Heartbeat runner · 6 runs** at the position of the latest run. The group's time and ID belong to that run. Press **Right** or **Enter** to expand a group and select an older run. **Left** collapses it.
 
-Use `which-session list --ungrouped` for one row per transcript. Search results, piped Markdown and JSON also show individual sessions. In the grouped terminal list, `--limit` counts visible entries. The picker browses every eligible entry unless you pass a limit.
+Use `which-session list --ungrouped` for one row per transcript. Search results, piped Markdown and JSON also show individual sessions. The browser includes every eligible entry. Printed output defaults to 15. Pass `--limit N` to set either limit. Each collapsed group counts as one entry.
 
 ## Finding a missing session
 
@@ -87,7 +87,7 @@ Use `which-session list --ungrouped` for one row per transcript. Search results,
 | --- | --- |
 | The project folder | `which-session list --here` from the project, or `which-session list --folder TEXT` for a partial folder name. |
 | The agent | Add `--source claude` or `--source codex` to a list or search. |
-| A conversation further back | `which-session list --days 90 --limit 100 --all` widens the default seven-day window and 15-row limit. |
+| A conversation further back | `which-session list --days 90 --all` browses the past 90 days and includes background sessions. |
 | A session ID | `which-session inspect ID` works outside the list’s date window. If several files share an ID, use one of the printed `--file` choices. |
 
 Activity comes from recorded turns and tool events. Search matches literal phrases in user and assistant messages, ignoring case. The default list and search hide background workers, temporary projects, and empty or undated sessions. `--all` includes them. Independent sessions can share a title.

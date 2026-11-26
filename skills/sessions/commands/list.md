@@ -17,7 +17,7 @@ Read-only. Defaults to the last 7 days and 15 rows.
    if [[ ! -f "$sessions_skill/scripts/sessions.py" && -f system/registries/paths.yaml ]]; then
        sessions_skill=system/skills/sessions
    fi
-   python3 "$sessions_skill/scripts/sessions.py" list --days <days> --limit <limit>
+   python3 "$sessions_skill/scripts/sessions.py" list --plain --ungrouped --days <days> --limit <limit>
    ```
 3. Show the table exactly as printed, with the full ids.
 4. Inspect the selected session and use the next step and resume command it prints.
