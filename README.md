@@ -48,6 +48,8 @@ From the checkout or extracted folder, these commands work even before installat
 ./which-session search "retry policy" --days 30
 ```
 
+In a terminal, columns align to the window width. In a narrow window, each session’s full ID appears on its own line for copying. Piping the output produces a Markdown table. Use `--json` for scripts.
+
 To inspect a match, paste its full ID or a unique prefix at the prompt. If the transcript identifies a single original session and folder, inspection prints the command to reopen it. You choose when to run it.
 
 ```sh

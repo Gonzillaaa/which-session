@@ -4,6 +4,8 @@
   "limit": 15,
   "turns": 4,
   "title_width": 60,
+  "table_min_title_width": 18,
+  "terminal_fallback_width": 80,
   "preview_width": 600,
   "match_context": 45,
   "process_timeout_seconds": 5

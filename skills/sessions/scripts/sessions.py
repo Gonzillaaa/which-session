@@ -7,6 +7,7 @@ import math
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -18,6 +19,7 @@ from zoneinfo import ZoneInfo
 if __name__ == "__main__":
     sys.dont_write_bytecode = True
 
+from session_table import print_terminal_table, print_wrapped, single_line
 from transcript import codex_session_id, scan
 
 SETTINGS = json.loads(Path(__file__).with_name("settings.json").read_text())
@@ -49,7 +51,7 @@ def fmt_time(epoch, fmt="%Y-%m-%d %H:%M"):
 
 
 def clean(text, width):
-    text = " ".join("".join(c if c.isprintable() else " " for c in text).split()).replace("|", "/")
+    text = single_line(text).replace("|", "/")
     return text if len(text) <= width else text[:width - 1] + "…"
 
 
@@ -182,6 +184,20 @@ def cmd_list(args):
     if not rows:
         print(f"No {'matching ' if pattern else ''}sessions in the last {args.days:g} day(s).")
         return 0
+    summary = f"{len(rows)} of {total} sessions. Inspect one with its ID or a unique prefix."
+    if sys.stdout.isatty():
+        fallback = SETTINGS["terminal_fallback_width"]
+        columns = shutil.get_terminal_size(fallback=(fallback, 0)).columns or fallback
+        print_terminal_table(rows, columns, SETTINGS)
+        print()
+        print_wrapped(summary, columns)
+    else:
+        print_markdown_table(rows, pattern)
+        print("\n" + summary)
+    return 0
+
+
+def print_markdown_table(rows, pattern):
     extra = " Match |" if pattern else ""
     print("| Session | Tool | Folder | Last active | Full id |" + extra)
     print("|---|---|---|---|---|" + ("---|" if pattern else ""))
@@ -191,8 +207,6 @@ def cmd_list(args):
         tool = row["tool"] + (" (background)" if row["background"] else "")
         snippet = (" " + row["match_role"] + ": " + clean(row["match"], SETTINGS["preview_width"]) + " |") if pattern else ""
         print(f"| {title}{mark} | {tool} | {row['folder']} | {row['last_active']} | `{row['id']}` |" + snippet)
-    print(f"\n{len(rows)} of {total} sessions. Inspect one with its ID or a unique prefix.")
-    return 0
 
 
 def resume_command(agent, sid, cwd):
