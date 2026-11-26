@@ -19,9 +19,10 @@ CLI = [sys.executable, str(SCRIPTS / "sessions.py")]
 HARNESS = """
 import json, sys
 from session_picker import choose_session
+from sessions import SETTINGS
 def preview(row):
     return ["Full ID: " + row["id"], "Last request: " + row["title"]]
-selected = choose_session(json.loads(sys.argv[1]), preview)
+selected = choose_session(json.loads(sys.argv[1]), preview, SETTINGS)
 print("PICKED=" + (selected["path"] if selected else "cancel"))
 """
 
@@ -68,7 +69,7 @@ def keyboard_run(command, keys, *, size=(24, 100), env=None):
 @pytest.fixture
 def entries():
     runs = [row("Routine run", "latest"), row("Historical audit", "older")]
-    return [dict(runs[0], title="Runner · 2 runs", members=runs), row("Deploy", "manual")]
+    return [dict(runs[0], title="Runner · 2 runs", job="Runner", members=runs), row("Deploy", "manual")]
 
 
 @pytest.mark.parametrize(("keys", "expected"), [
@@ -87,6 +88,55 @@ def test_expanded_runs_show_their_dates_in_a_narrow_terminal(entries):
     older["last_active"] = "2026-01-10 08:30"
     output = keyboard_run([sys.executable, "-c", HARNESS, json.dumps(entries)], b"\r\x1b", size=(20, 36))
     assert latest["last_active"].encode() in output and older["last_active"].encode() in output
+
+
+def picker_frame(entries, size):
+    # Read the cells from a real curses window, independently of its ANSI update strategy.
+    script = """
+import curses, json, sys
+from session_picker import draw, metadata_widths, visible_rows
+from sessions import SETTINGS
+entries = json.loads(sys.argv[1])
+rows = visible_rows(entries, "", set())
+def capture(screen):
+    draw(screen, curses, rows, 0, "", set(), lambda row: ["Last request: Continue"], 0, metadata_widths(entries), SETTINGS)
+    return [screen.instr(y, 0).decode().rstrip() for y in range(screen.getmaxyx()[0])]
+print("FRAME=" + json.dumps(curses.wrapper(capture)))
+"""
+    output = keyboard_run([sys.executable, "-c", script, json.dumps(entries)], [], size=size)
+    return json.loads(output.split(b"FRAME=")[-1])
+
+
+@pytest.mark.parametrize("size", [(28, 110), (15, 80)])
+def test_picker_columns_and_preview_have_distinct_positions(size):
+    entries = [row("Short", "a"), row("A much longer session title", "b")]
+    entries[1].update(tool="claude", folder="workbench")
+    lines = picker_frame(entries, size)
+    header = next(line for line in lines if "Session" in line and "Tool" in line)
+    first = next(line for line in lines if "Short" in line)
+    second = next(line for line in lines if "A much longer" in line)
+    assert header.index("Tool") == first.index("codex") == second.index("claude")
+    assert header.index("Folder") == first.index("planes") == second.index("workbench")
+    assert header.index("Last active") == first.index("2026") == second.index("2026")
+    assert lines.index(second) - lines.index(first) == (2 if size[0] == 28 else 1)
+    preview = next(i for i, line in enumerate(lines) if "Preview" in line)
+    assert lines.index(second) < preview < next(i for i, line in enumerate(lines) if "Last request" in line)
+
+
+def test_narrow_picker_moves_tool_and_folder_to_selected_preview():
+    lines = picker_frame([row("Spring release", "id")], (16, 44))
+    heading = next(line for line in lines if "Session" in line)
+    assert "Last active" in heading and "Tool" not in heading and "Folder" not in heading
+    preview = next(line for line in lines if "Preview" in line)
+    assert "codex" in preview and "planes" in preview
+
+
+def test_group_size_fits_when_its_title_is_shortened(entries):
+    group = entries[0]
+    group["job"] = "Weekly review and maintenance"
+    group["title"] = group["job"] + " · 2 runs"
+    lines = picker_frame(entries, (20, 52))
+    assert any("▸" in line and "2 runs" in line for line in lines)
 
 
 def test_cancel_from_empty_results_restores_small_terminal():

@@ -232,7 +232,7 @@ def cmd_pick(args):
                              resume_command=resume_command, settings=SETTINGS)
 
     try:
-        selected = choose_session(entries, preview)
+        selected = choose_session(entries, preview, SETTINGS)
     except PickerError as exc:
         print(f"which-session pick: {exc}", file=sys.stderr)
         return 1

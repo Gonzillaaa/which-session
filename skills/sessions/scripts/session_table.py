@@ -13,6 +13,15 @@ def single_line(text):
     return " ".join(printable(text).split())
 
 
+def tool_label(row):
+    label = row["tool"]
+    if row.get("background"):
+        label += " (background)"
+    if row.get("live"):
+        label += " (live)"
+    return label
+
+
 def char_width(char):
     if unicodedata.category(char) in {"Mn", "Me"}:
         return 0
@@ -37,6 +46,12 @@ def shorten(text, width):
         return text
     prefix, _ = split_at_width(text, width - 1)
     return prefix.rstrip() + "…"
+
+
+def group_title(row, width):
+    count = f"{len(row['members'])} runs"
+    room = width - cells(" · " + count)
+    return shorten(single_line(row["job"]), room) + " · " + count if room > 0 else count
 
 
 def wrapped_lines(text, width):
@@ -82,23 +97,15 @@ def print_aligned(values, widths):
 def print_terminal_table(rows, columns, settings):
     data = []
     for row in rows:
-        tool = row["tool"]
-        if row["background"]:
-            tool += " (background)"
-        if row["live"]:
-            tool += " (live)"
         title = shorten(single_line(row["title"]), settings["title_width"])
-        data.append((title, tool, single_line(row["folder"]), row["last_active"], single_line(row["id"])))
+        data.append((title, tool_label(row), single_line(row["folder"]), row["last_active"], single_line(row["id"])))
 
     widths = table_widths(data, columns, settings["table_min_title_width"])
     if widths:
         print_aligned(HEADERS, widths)
     for index, (values, row) in enumerate(zip(data, rows)):
         if "members" in row:
-            count = f"{len(row['members'])} runs"
-            room = (widths[0] if widths else columns) - cells(" · " + count)
-            title = shorten(single_line(row["job"]), room) + " · " + count if room > 0 else count
-            values = (title, *values[1:])
+            values = (group_title(row, widths[0] if widths else columns), *values[1:])
         if widths:
             print_aligned(values, widths)
         else:

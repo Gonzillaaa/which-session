@@ -71,6 +71,8 @@ For terminal usage or the installed version, run `which-session help` or `which-
 
 Run `which-session pick` in a terminal, or `which-session pick --here` to browse the current project. The picker starts with the past seven days. Type part of a title or project path to filter, then use the arrow keys to move. The preview shows the last user request, the last recorded tool call and its outcome, the full session ID, and available resume instructions.
 
+On narrow screens, the preview heading shows the selected session’s details that don’t fit in the list. Use **Page Up** and **Page Down** to scroll a long preview.
+
 Press **Enter** on a session to print its inspection and return to your shell. Press **Esc** to leave the picker. To reopen a conversation, run the resume command from its inspection.
 
 ### Recurring jobs
