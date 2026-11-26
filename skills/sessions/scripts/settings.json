@@ -8,5 +8,11 @@
   "terminal_fallback_width": 80,
   "preview_width": 600,
   "match_context": 45,
+  "recurring_jobs": [
+    {
+      "name": "Heartbeat runner",
+      "opening": "Read and execute system/skills/hb/prompts/heartbeat-runner.md"
+    }
+  ],
   "process_timeout_seconds": 5
 }

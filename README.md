@@ -67,6 +67,18 @@ python3 examples/demo.py
 
 For terminal usage or the installed version, run `which-session help` or `which-session --version`.
 
+## Pick a session with the keyboard
+
+Run `which-session pick` in a terminal, or `which-session pick --here` to browse the current project. The picker starts with the past seven days. Type part of a title or project path to filter, then use the arrow keys to move. The preview shows the last user request, the last recorded tool call and its outcome, the full session ID, and available resume instructions.
+
+Press **Enter** on a session to print its inspection and return to your shell. Press **Esc** to leave the picker. To reopen a conversation, run the resume command from its inspection.
+
+### Recurring jobs
+
+The terminal list and picker combine repeated runs of a known job in the same project and agent. For example, six heartbeat runs appear as **Heartbeat runner · 6 runs** at the position of the latest run. The group's time and ID belong to that run. In the picker, **Right** or **Enter** expands a group so you can select an older run. **Left** collapses it.
+
+Use `which-session list --ungrouped` for one row per transcript. Search results, piped Markdown and JSON also show individual sessions. In the grouped terminal list, `--limit` counts visible entries. The picker browses every eligible entry unless you pass a limit.
+
 ## Finding a missing session
 
 | What you remember | What to run |
@@ -89,6 +101,8 @@ A list includes project names and full session IDs. A search adds matching text.
 Claude Code and Codex both write one JSON record per line, but they represent messages and tool results differently. To tell you whether an interrupted command actually failed, Which Session has to match the tool call to its result by ID. Python's standard library handles JSON parsing, timestamps and shell quoting for paths such as `Jane's project`. A shell script would need its own JSON handling or an extra tool such as `jq`. The CLI and both agent integrations reuse the same Python parser.
 
 ## Development and feedback
+
+The `recurring_jobs` array in the skill settings defines each job's display `name` and literal `opening`. The first user message must begin with that opening followed by whitespace or the end of the message. Use the complete invocation to distinguish one job from another. An empty array disables grouping. [Skill settings](skills/sessions/scripts/settings.json)
 
 ```sh
 uv run --with-requirements requirements-dev.txt pytest -q

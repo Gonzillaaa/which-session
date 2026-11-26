@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -19,7 +20,9 @@ from zoneinfo import ZoneInfo
 if __name__ == "__main__":
     sys.dont_write_bytecode = True
 
-from session_table import print_terminal_table, print_wrapped, single_line
+from session_groups import JobConfigError, configured_jobs, group_runs, recurring_job
+from session_preview import describe_action, preview_lines, resume_guidance
+from session_table import print_terminal_table, print_wrapped, printable, single_line
 from transcript import codex_session_id, scan
 
 SETTINGS = json.loads(Path(__file__).with_name("settings.json").read_text())
@@ -131,15 +134,14 @@ def codex_names():
     return names
 
 
-def cmd_list(args):
-    query = getattr(args, "phrase", None)
-    pattern = re.compile(re.escape(" ".join(query.split())), re.IGNORECASE) if query else None
+def recent_rows(args, transcripts, *, pattern=None, grouped=False):
+    rules = configured_jobs(SETTINGS) if grouped else ()
     cutoff = time.time() - args.days * 86400
     names = codex_names() if args.source != "claude" else {}
     live = live_processes(ps_text())
     rows = []
     unreadable = 0
-    for agent, sid, path in sources(args.source):
+    for agent, sid, path in transcripts:
         try:
             stat = path.stat()
             log = scan(path, agent, pattern=pattern, cutoff=cutoff, context=SETTINGS["match_context"], undated=args.all)
@@ -171,20 +173,33 @@ def cmd_list(args):
         }
         if pattern:
             row.update(match=log.match, match_role=log.match_role, match_epoch=log.match_time)
+        if grouped:
+            row["job"] = recurring_job(log.first_user, rules)
         rows.append(row)
     if unreadable:
         print(f"Skipped {unreadable} unreadable transcript(s).", file=sys.stderr)
     order = "match_epoch" if pattern else "activity_epoch"
     rows.sort(key=lambda row: (row[order] is not None, row[order], row["id"]), reverse=True)
-    total = len(rows)
-    rows = rows[:args.limit]
+    return rows
+
+
+def cmd_list(args):
+    query = getattr(args, "phrase", None)
+    pattern = re.compile(re.escape(" ".join(query.split())), re.IGNORECASE) if query else None
+    grouped = sys.stdout.isatty() and not args.json and args.cmd == "list" and not args.ungrouped
+    sessions = recent_rows(args, sources(args.source), pattern=pattern, grouped=grouped)
+    entries = group_runs(sessions) if grouped else sessions
+    rows = entries[:args.limit]
     if args.json:
         print(json.dumps(rows, indent=2))
         return 0
     if not rows:
         print(f"No {'matching ' if pattern else ''}sessions in the last {args.days:g} day(s).")
         return 0
-    summary = f"{len(rows)} of {total} sessions. Inspect one with its ID or a unique prefix."
+    summary = f"{len(rows)} of {len(sessions)} sessions. Inspect one with its ID or a unique prefix."
+    if len(entries) < len(sessions):
+        summary = (f"{len(rows)} of {len(entries)} entries ({len(sessions)} sessions). "
+                   "Group IDs identify the latest run. Use which-session pick to expand a group.")
     if sys.stdout.isatty():
         fallback = SETTINGS["terminal_fallback_width"]
         columns = shutil.get_terminal_size(fallback=(fallback, 0)).columns or fallback
@@ -195,6 +210,37 @@ def cmd_list(args):
         print_markdown_table(rows, pattern)
         print("\n" + summary)
     return 0
+
+
+def cmd_pick(args):
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        print("pick requires an interactive terminal. Use which-session list for piped output.", file=sys.stderr)
+        return 1
+    from session_picker import PickerError, choose_session
+
+    print("Reading local session histories…", flush=True)
+    transcripts = list(sources(args.source))
+    rows = recent_rows(args, transcripts, grouped=True)
+    if not rows:
+        print(f"No sessions in the last {args.days:g} day(s).")
+        return 0
+    entries = group_runs(rows)[:args.limit]
+    copies = Counter((tool, sid) for tool, sid, _ in transcripts)
+
+    def preview(row):
+        return preview_lines(row, duplicate=copies[row["tool"], row["id"]] > 1,
+                             resume_command=resume_command, settings=SETTINGS)
+
+    try:
+        selected = choose_session(entries, preview)
+    except PickerError as exc:
+        print(f"which-session pick: {exc}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+    if selected is None:
+        return 0
+    return cmd_tail(argparse.Namespace(id=selected["id"], file=selected["path"], n=SETTINGS["turns"]))
 
 
 def print_markdown_table(rows, pattern):
@@ -246,11 +292,12 @@ def cmd_tail(args):
         return 1
     live = not same_host_copies and (agent, sid) in live_processes(ps_text())
     name = (codex_names().get(sid) if agent == "codex" else None) or log.title
-    print(f"id: {sid}\ntool: {agent}\nfolder: {log.cwd}\nbranch: {log.branch}\ntitle: {clean(name, SETTINGS['title_width'])}")
+    print(f"id: {printable(sid)}\ntool: {agent}\nfolder: {printable(log.cwd)}\nbranch: {printable(log.branch)}"
+          f"\ntitle: {clean(name, SETTINGS['title_width'])}")
     if log.background:
         print("session kind: background")
     if log.parent_id:
-        print(f"parent session: {log.parent_id}")
+        print(f"parent session: {printable(log.parent_id)}")
     print(f"last active: {fmt_time(log.active)}\n")
     for role, text in log.turns:
         who = "you" if role == "user" else agent
@@ -282,22 +329,9 @@ def cmd_tail(args):
         print("Next step: reopen the session and pick up the last user request.")
     else:
         print("Next step: reopen the session and review the last exchange.")
-    if same_host_copies:
-        print(f"Multiple {agent} transcripts have the same ID. Native resume selects by ID and cannot specify this file.")
-        return 0
-    cmd = resume_command(agent, sid, log.cwd)
-    if cmd:
-        if not Path(log.cwd).is_dir():
-            print("The recorded folder is unavailable. Locate or restore it before using this command.")
-        print("Resume command for later:" if live else "Resume command for the original folder:")
-        print(cmd)
-    else:
-        print("Verify the original working directory and full session ID to construct a resume command.")
+    for line in resume_guidance(agent, sid, log.cwd, live=live, duplicate=same_host_copies, resume_command=resume_command):
+        print(line)
     return 0
-
-
-def describe_action(action):
-    return " ".join([action.name, *(repr(path) for path in action.targets)]).strip()
 
 
 def positive(value):
@@ -312,18 +346,23 @@ def main(argv=None):
     version = f"{parser.prog} {SETTINGS['version']}"
     parser.add_argument("--version", action="version", version=version)
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name, summary in (("list", "List recent sessions"), ("search", "Find a remembered phrase")):
+    for name, summary in (("list", "List recent sessions"), ("search", "Find a remembered phrase"),
+                          ("pick", "Filter, preview and inspect sessions using the keyboard")):
         command = sub.add_parser(name, help=summary)
         if name == "search":
             command.add_argument("phrase", help="literal phrase in a user or assistant message")
         command.add_argument("--days", type=float, default=SETTINGS["days"])
-        command.add_argument("--limit", type=positive, default=SETTINGS["limit"])
+        command.add_argument("--limit", type=positive, default=None if name == "pick" else SETTINGS["limit"],
+                             help="maximum number of entries")
         command.add_argument("--folder", default="")
         command.add_argument("--here", action="store_true")
         command.add_argument("--all", action="store_true", help="include background, empty and undated sessions")
         command.add_argument("--source", choices=["claude", "codex", "all"], default="all")
-        command.add_argument("--json", action="store_true")
-        command.set_defaults(fn=cmd_list)
+        if name == "list":
+            command.add_argument("--ungrouped", action="store_true", help="show every recurring run separately")
+        if name != "pick":
+            command.add_argument("--json", action="store_true")
+        command.set_defaults(fn=cmd_pick if name == "pick" else cmd_list)
     tail = sub.add_parser("inspect", aliases=["tail"], help="Inspect one session and see how to resume it")
     tail.add_argument("id")
     tail.add_argument("--file", help="select an exact discovered transcript path when the ID matches several copies")
@@ -342,7 +381,10 @@ def main(argv=None):
         parser.error("--days must be a finite, nonnegative number")
     if hasattr(args, "phrase") and not args.phrase.strip():
         parser.error("supply a nonempty search phrase")
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except JobConfigError as exc:
+        parser.error(str(exc))
 
 
 if __name__ == "__main__":

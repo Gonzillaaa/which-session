@@ -67,6 +67,8 @@ It accepts the same filters as list. Both commands default to seven days.
 Plain requests map directly: "my last 4 sessions" is `--limit 4`; "this week"
 is `--days 7`; "yesterday's work in myproject" is `--days 2 --folder myproject`.
 
+For interactive browsing, a user can run `which-session pick` in their own terminal, type a title or project, preview the selected conversation, and press Enter to inspect it. For agent requests, use the noninteractive `list`, `search` and `inspect` commands. Captured Markdown and JSON include individual transcripts. The terminal list groups configured recurring jobs by agent and project. Use `list --ungrouped` to see each run in a terminal.
+
 ## 4. Reading the table
 
 - **Session** is the session's name, or its first message when it has none.

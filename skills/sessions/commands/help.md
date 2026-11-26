@@ -15,3 +15,5 @@ In Codex, use `$sessions help` or `$sessions version`. In a terminal, use `which
 For example, ask for “my last 4 sessions” or “sessions this week”.
 Inspection prints the next step and, when the original session can be identified, its resume command. If multiple transcripts share an ID, use the printed `--file` choices to inspect a particular copy.
 Add `--source claude` or `--source codex` to list one tool only.
+
+In your terminal, `which-session pick --here` lets you filter by title or project, preview the last request and tool outcome, and select a session with Enter. Expand recurring jobs with Right or Enter, or use `which-session list --ungrouped` to list each run separately.

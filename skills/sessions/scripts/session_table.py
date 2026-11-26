@@ -5,8 +5,12 @@ GAP = "  "
 HEADERS = ("Session", "Tool", "Folder", "Last active", "Full ID")
 
 
+def printable(text):
+    return "".join(c if c.isprintable() else " " for c in text)
+
+
 def single_line(text):
-    return " ".join("".join(c if c.isprintable() else " " for c in text).split())
+    return " ".join(printable(text).split())
 
 
 def char_width(char):
@@ -35,19 +39,24 @@ def shorten(text, width):
     return prefix.rstrip() + "…"
 
 
-def print_wrapped(text, width, indent=""):
-    if width <= len(indent):
-        indent = ""
+def wrapped_lines(text, width):
     while text:
-        line, rest = split_at_width(text, width - len(indent))
+        line, rest = split_at_width(text, width)
         if not line:  # A double-width character in a one-column terminal.
-            line, rest = text[0], text[1:]
+            line, rest = "…", text[1:]
         elif rest and not rest.startswith(" "):
             before, space, word = line.rpartition(" ")
             if space and before.strip():
                 line, rest = before, word + rest
-        print(indent + line.rstrip())
+        yield line.rstrip()
         text = rest.lstrip()
+
+
+def print_wrapped(text, width, indent=""):
+    if width <= len(indent):
+        indent = ""
+    for line in wrapped_lines(text, width - len(indent)):
+        print(indent + line)
 
 
 def table_widths(data, columns, min_title):
@@ -85,6 +94,11 @@ def print_terminal_table(rows, columns, settings):
     if widths:
         print_aligned(HEADERS, widths)
     for index, (values, row) in enumerate(zip(data, rows)):
+        if "members" in row:
+            count = f"{len(row['members'])} runs"
+            room = (widths[0] if widths else columns) - cells(" · " + count)
+            title = shorten(single_line(row["job"]), room) + " · " + count if room > 0 else count
+            values = (title, *values[1:])
         if widths:
             print_aligned(values, widths)
         else:
