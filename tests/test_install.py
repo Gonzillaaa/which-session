@@ -1,5 +1,7 @@
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -39,7 +41,7 @@ def test_live_install_reinstall_and_uninstall(install_env, tmp_path):
     assert [p.lstat().st_ino for p in (cli, codex, claude, commands)] == before
     assert cli.samefile(ROOT / "which-session") and cli.samefile(ROOT / "sessions")
     assert codex.samefile(SKILL) and claude.samefile(SKILL)
-    for name in ("help.md", "inspect.md", "version.md"):
+    for name in ("list.md", "search.md", "inspect.md", "help.md", "version.md"):
         assert (commands / name).samefile(SKILL / "commands" / name)
     result = subprocess.check_output([cli, "list", "--json"], env=install_env,
                                      cwd=tmp_path, text=True)
@@ -111,3 +113,35 @@ def test_readme_quickstart_runs_with_empty_histories(install_env, tmp_path):
         result = subprocess.run(["sh", "-ec", block], input="", cwd=ROOT,
                                 env=install_env, capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stderr
+
+
+def test_download_install_instructions_connect_both_agents(install_env, tmp_path):
+    folder = Path(install_env["HOME"]) / "Documents/which-session"
+    folder.mkdir(parents=True)
+    for filename in ("install.py", "which-session", "README.md"):
+        shutil.copy2(ROOT / filename, folder / filename)
+    shutil.copytree(SKILL, folder / "skills/sessions")
+    readme = (folder / "README.md").read_text()
+    section = readme.split("## Install on macOS or Linux\n", 1)[1].split("\n## ", 1)[0]
+    blocks = re.findall(r"```sh\n(.*?)\n```", section, re.DOTALL)
+    assert blocks
+    result = subprocess.run(["sh", "-ec", "\n".join(blocks)], env=install_env, cwd=tmp_path,
+                            capture_output=True, text=True, check=True)
+    cli, codex, claude, commands = destinations(install_env)
+    expected = json.loads((folder / "skills/sessions/scripts/settings.json").read_text())["version"]
+    assert result.stdout.splitlines()[-1] == f"which-session {expected}"
+    assert cli.samefile(folder / "which-session") and claude.samefile(codex)
+    assert {p.stem for p in commands.glob("*.md")} == {"list", "search", "inspect", "help", "version"}
+
+    # Run the same search via both installed scripts, using only synthetic history.
+    history = tmp_path / "demo"
+    subprocess.run([sys.executable, ROOT / "examples/demo.py", "--keep", history], check=True, capture_output=True)
+    env = {**install_env, "CLAUDE_CONFIG_DIR": str(history / "claude"), "CODEX_HOME": str(history / "codex")}
+
+    def search(entry):
+        return json.loads(subprocess.check_output([*entry, "search", "retry policy", "--all", "--json"], env=env))
+
+    rows = search([cli])
+    assert {r["tool"] for r in rows} == {"claude", "codex"}
+    for skill in (codex, claude):
+        assert search([sys.executable, skill / "scripts/sessions.py"]) == rows

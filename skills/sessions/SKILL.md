@@ -18,56 +18,30 @@ tier: extension
 
 ## 1. Role
 
-Claude Code stores local project transcripts under `~/.claude/projects/<folder>/<id>.jsonl`.
-This skill also reads file-backed Codex rollouts under `~/.codex/sessions/YYYY/MM/DD/rollout-*-<id>.jsonl`.
-The corresponding overrides are `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. Recovery requires a saved transcript in one of those locations. This skill lists those transcripts as
-a table and checks whether a session died mid-task, so you can reopen the ones
-you still need. It is read-only: it never writes, resumes, or deletes anything.
+Recover a local Claude Code or Codex conversation. Read its recorded messages and tool outcomes, explain where it stopped, and show the user how to reopen it. Both hosts install this same skill directory. Claude history lives under `CLAUDE_CONFIG_DIR` (default `~/.claude`) and Codex history under `CODEX_HOME` (default `~/.codex`). Each host can read both histories if its shell has access.
 
 ## 2. Commands
 
-| Command | What it does |
-|---|---|
-| `/sessions:list [days] [limit]` | Table of recent sessions. Defaults: last 7 days, 15 rows. |
-| `/sessions:search "phrase"` | Search recent conversations and show one matching passage per session. |
-| `/sessions:inspect <id>` | Last few messages of one session, and whether it died mid-task. |
-| `/sessions:help` | Show commands and usage examples. |
-| `/sessions:version` | Print the installed skill version. |
+Use the same command guide in either host. In Claude Code the user can invoke a slash command. In Codex the user types `$sessions` and asks for the action. Run the command for them and return its output in chat.
 
-In Codex, route `$sessions help` or `sessions:help` to [commands/help.md](commands/help.md).
-Route `$sessions version` or `sessions:version` to [commands/version.md](commands/version.md).
-These requests do not need a history search.
+| Task | Claude Code | Codex | Guide |
+| --- | --- | --- | --- |
+| List recent sessions | `/sessions:list 7 4` | `$sessions list my last four sessions` | [List](commands/list.md) |
+| Search messages | `/sessions:search "retry policy" --days 30` | `$sessions find "retry policy" from the past 30 days` | [Search](commands/search.md) |
+| Inspect one session | `/sessions:inspect ID --n 8` | `$sessions inspect ID and show the last eight messages` | [Inspect](commands/inspect.md) |
+| Show usage | `/sessions:help` | `$sessions help` | [Help](commands/help.md) |
+| Show the installed version | `/sessions:version` | `$sessions version` | [Version](commands/version.md) |
 
-For session recovery in Codex, invoke `$sessions` or ask in plain words ("list my sessions",
-"inspect session 01a1...") and run the scripts in section 3 yourself. The
-script and its output are identical in both tools.
+Also route plain requests such as “what was I working on?” to list, and `sessions:help` or `sessions:version` to the corresponding guides. Help and version require no transcript access.
 
-## 3. How to run it
+## 3. Running the bundled command
 
-If the global CLI is installed, use `which-session list --plain --ungrouped`, `which-session search` or
-`which-session inspect`. Otherwise use the full path to `scripts/sessions.py` inside the skill directory supplied by
-the agent. Keep the caller's working directory so `--here` filters the right project.
-The script uses the Python standard library. For example, with the global Codex install:
+Run Python 3 with the absolute path to `scripts/sessions.py` inside the loaded skill. Keep the caller’s working directory so `--here` selects the right project. At the default user installation the script is under `~/.claude/skills/sessions/` or `~/.codex/skills/sessions/`. A standalone checkout uses the same script through `which-session`.
 
-```bash
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" list --plain --ungrouped --days 7 --limit 15
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" search "email draft" --days 30
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/sessions/scripts/sessions.py" tail <id-or-prefix>
-```
-
-`list` options: `--days N`, `--limit N`, `--folder TEXT` (match part of the
-folder path), `--here` (only this directory), `--all` (include empty and
-throwaway sessions), `--source claude|codex|all` (default all), `--json`.
-
-For “find where we discussed X,” use `search "X"`. Pass the phrase as one literal argument.
-Search matches user and assistant text case-insensitively across line breaks. It returns
-one excerpt per session, ordered by the newest matching message in the selected window.
-It accepts the same filters as list. Both commands default to seven days.
-
-Plain requests map directly: "my last 4 sessions" is `--limit 4`; "this week"
-is `--days 7`; "yesterday's work in myproject" is `--days 2 --folder myproject`.
-
-In their own terminal, users can run `which-session list`, type a title or project, preview the selected conversation, and press Enter to inspect it. The browser groups recurring jobs by agent and project. For agent requests, `--plain --ungrouped` prints one row per transcript even when the shell provides a terminal. Piped Markdown and JSON always include individual runs.
+- **List** with `list --plain --ungrouped` for one row per transcript in chat. The default is the past 7 days, newest activity first, up to 15 rows. “My last four” adds `--limit 4`.
+- **Search** with `search "retry policy"` for one excerpt per session, newest matching message first. Pass the phrase as one literal argument. List and search accept `--days N`, `--limit N`, `--folder TEXT`, `--here`, `--source claude|codex|all`, `--all` and `--json`. Only list accepts `--plain` and `--ungrouped`.
+- **Inspect** with `inspect ID` for up to four recent messages, recorded tool outcomes and resume guidance. Pass `--n N` for more messages or `--file PATH` to select a copy from the CLI’s printed choices.
+- **Terminal browsing** is for the user’s own terminal. `which-session list` opens the keyboard browser. `pick` is a CLI alias for `list`, and `tail` is an alias for `inspect`.
 
 ## 4. Reading the table
 
@@ -85,7 +59,7 @@ In their own terminal, users can run `which-session list`, type a title or proje
 
 ## 5. Recovering one
 
-Run `tail <id-or-prefix>` or `inspect <id-or-prefix>`. Report the recorded tool, file targets, outcome and printed next step. A recorded nonzero exit code calls for reviewing the error. An output with no structured success or failure leaves the outcome unknown. When several transcripts match, present the CLI’s file choices and inspect the selected copy with `--file`. For duplicate IDs within one host, explain why the client cannot select that copy by ID. A missing result
+Report the recorded tool, file targets, outcome and printed next step. A recorded nonzero exit code calls for reviewing the error. An output with no structured success or failure leaves the outcome unknown. When several transcripts match, present the CLI’s file choices and inspect the selected copy with `--file`. For duplicate IDs within one host, explain why the client cannot select that copy by ID. A missing result
 leaves the effect of the operation unknown. If a matching process is running, check
 it first. Copy the script's quoted resume command exactly. If it cannot identify
 the original directory or full ID, ask the user for the missing information.

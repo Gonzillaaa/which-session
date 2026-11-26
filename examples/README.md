@@ -30,6 +30,14 @@ python3 examples/demo.py --keep "$demo_dir"
 
 Use `--all` for this example because the histories refer to a project in a temporary directory. The default list hides temporary projects.
 
+To try the keyboard browser with the same sample sessions, run this from the same checkout and terminal after the example above.
+
+```sh
+CLAUDE_CONFIG_DIR="$demo_dir/claude" CODEX_HOME="$demo_dir/codex" ./which-session list --all
+```
+
+Type `notes` and press **Enter**. Inspection shows the unfinished write in **Backoff notes**. To try the skill with your own sessions, open a new Claude Code or Codex chat. [Skill commands and examples](../README.md#use-the-skill-in-claude-code-or-codex)
+
 ## What you share
 
 The list table shows titles, host, folder name, activity time and full session IDs. A phrase search adds an excerpt and its speaker. Inspect shows recent messages, the original directory, and file paths associated with supported tools. JSON rows additionally include the absolute working directory, transcript path and last user message. Review those fields before sharing output from a real history. Excerpts you show in a hosted agent become part of that conversation.
