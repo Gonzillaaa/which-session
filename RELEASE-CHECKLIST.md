@@ -20,4 +20,6 @@ Use this checklist for each release. The packaged version, tag and source archiv
 
 ## Verification history
 
+The 0.2.0 candidate was installed twice from an extracted source ZIP into a fresh account directory and then uninstalled. The CLI and both installed skill scripts produced identical results for list, search, inspect, help and version against two disposable histories. In a separate clean installation, Claude Code’s command catalog included `/sessions` and its five shortcuts. Codex’s skill catalog reported `sessions` enabled and resolved its instructions to the packaged file.
+
 Native recovery was rehearsed on macOS with Claude Code 2.1.303 and Codex CLI 0.171.0. Each client reopened a disposable conversation in its original project. The v0.1.0 release candidate passed 52 tests on macOS and in an offline Debian Linux container. The cases include repeated installs, destination conflicts, duplicate transcript IDs, missing indexes, Codex worker filtering, and resuming from a directory with spaces.

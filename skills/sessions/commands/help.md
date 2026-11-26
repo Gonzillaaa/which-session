@@ -4,7 +4,7 @@ description: "Usage for the sessions skill."
 
 # /sessions:help
 
-Show the five actions using the syntax for the current chat.
+Show the five actions using the syntax for the current chat. Claude Code also accepts a request in plain language after `/sessions`, just as Codex does after `$sessions`.
 
 | Action | Claude Code | Codex |
 | --- | --- | --- |

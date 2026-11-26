@@ -22,7 +22,7 @@ Recover a local Claude Code or Codex conversation. Read its recorded messages an
 
 ## 2. Commands
 
-Use the same command guide in either host. In Claude Code the user can invoke a slash command. In Codex the user types `$sessions` and asks for the action. Run the command for them and return its output in chat.
+Use the same command guide in either host. In Claude Code the user can ask in plain language with `/sessions` or invoke a shortcut below. In Codex the user types `$sessions` and asks for the action. Run the command for them and return its output in chat.
 
 | Task | Claude Code | Codex | Guide |
 | --- | --- | --- | --- |

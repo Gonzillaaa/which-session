@@ -36,7 +36,7 @@ Open a **new chat** in the app you use. In Claude Code, type `/sessions:version`
 
 ## Use the skill in Claude Code or Codex
 
-Both agents load the same skill instructions, Python code and settings. In the same folder, with access to the same histories, they can list, search and inspect the same conversations. Claude Code exposes five slash commands. Codex uses one `$sessions` skill and takes the action in your own words. Type these examples in the chat box.
+Both agents load the same skill instructions, Python code and settings. In the same folder, with access to the same histories, they can list, search and inspect the same conversations. To ask in your own words, type `/sessions list my last four sessions` in Claude Code or `$sessions list my last four sessions` in Codex. Claude Code also offers a shortcut for each of the five actions.
 
 | What you want to do | Claude Code | Codex |
 | --- | --- | --- |
@@ -110,6 +110,8 @@ Use `which-session list --ungrouped` for one row per transcript. Search results,
 | `--file PATH` | inspect | Choose the exact transcript file when an ID matches several copies. Use one of the commands printed by `inspect`. |
 
 For example, `which-session search "retry policy" --days 30 --source codex` searches one agent for the past month. `which-session list --plain --here --limit 5` prints the five most recent entries from the current project.
+
+Inside a checkout, `./which-session` and `./sessions` run the same program. The installed terminal command is named `which-session`.
 
 ## Updating or removing an installation
 
