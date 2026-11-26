@@ -5,8 +5,21 @@ GAP = "  "
 HEADERS = ("Session", "Tool", "Folder", "Last active", "Full ID")
 
 
+def printable(text):
+    return "".join(c if c.isprintable() else " " for c in text)
+
+
 def single_line(text):
-    return " ".join("".join(c if c.isprintable() else " " for c in text).split())
+    return " ".join(printable(text).split())
+
+
+def tool_label(row):
+    label = row["tool"]
+    if row.get("background"):
+        label += " (background)"
+    if row.get("live"):
+        label += " (live)"
+    return label
 
 
 def char_width(char):
@@ -35,19 +48,30 @@ def shorten(text, width):
     return prefix.rstrip() + "…"
 
 
-def print_wrapped(text, width, indent=""):
-    if width <= len(indent):
-        indent = ""
+def group_title(row, width):
+    count = f"{len(row['members'])} runs"
+    room = width - cells(" · " + count)
+    return shorten(single_line(row["job"]), room) + " · " + count if room > 0 else count
+
+
+def wrapped_lines(text, width):
     while text:
-        line, rest = split_at_width(text, width - len(indent))
+        line, rest = split_at_width(text, width)
         if not line:  # A double-width character in a one-column terminal.
-            line, rest = text[0], text[1:]
+            line, rest = "…", text[1:]
         elif rest and not rest.startswith(" "):
             before, space, word = line.rpartition(" ")
             if space and before.strip():
                 line, rest = before, word + rest
-        print(indent + line.rstrip())
+        yield line.rstrip()
         text = rest.lstrip()
+
+
+def print_wrapped(text, width, indent=""):
+    if width <= len(indent):
+        indent = ""
+    for line in wrapped_lines(text, width - len(indent)):
+        print(indent + line)
 
 
 def table_widths(data, columns, min_title):
@@ -73,18 +97,15 @@ def print_aligned(values, widths):
 def print_terminal_table(rows, columns, settings):
     data = []
     for row in rows:
-        tool = row["tool"]
-        if row["background"]:
-            tool += " (background)"
-        if row["live"]:
-            tool += " (live)"
         title = shorten(single_line(row["title"]), settings["title_width"])
-        data.append((title, tool, single_line(row["folder"]), row["last_active"], single_line(row["id"])))
+        data.append((title, tool_label(row), single_line(row["folder"]), row["last_active"], single_line(row["id"])))
 
     widths = table_widths(data, columns, settings["table_min_title_width"])
     if widths:
         print_aligned(HEADERS, widths)
     for index, (values, row) in enumerate(zip(data, rows)):
+        if "members" in row:
+            values = (group_title(row, widths[0] if widths else columns), *values[1:])
         if widths:
             print_aligned(values, widths)
         else:

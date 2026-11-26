@@ -4,14 +4,16 @@ description: "Usage for the sessions skill."
 
 # /sessions:help
 
-- `/sessions:list [days] [limit]` lists recent sessions. The default is 15 rows from the past 7 days.
-- `/sessions:search "phrase"` finds matching passages, newest first.
-- `/sessions:inspect <id>` shows the last exchanges, tool outcomes and next step.
-- `/sessions:help` shows these commands.
-- `/sessions:version` prints the installed version.
+Show the five actions using the syntax for the current chat. Claude Code also accepts a request in plain language after `/sessions`, just as Codex does after `$sessions`.
 
-In Codex, use `$sessions help` or `$sessions version`. In a terminal, use `which-session help` or `which-session --version`.
+| Action | Claude Code | Codex |
+| --- | --- | --- |
+| List up to four sessions from the past week | `/sessions:list 7 4` | `$sessions list my last four sessions this week` |
+| Find a phrase from the past month | `/sessions:search "retry policy" --days 30` | `$sessions find "retry policy" in the past month` |
+| Inspect a result | `/sessions:inspect ID` | `$sessions inspect ID` |
+| Show this guide | `/sessions:help` | `$sessions help` |
+| Check the installed version | `/sessions:version` | `$sessions version` |
 
-For example, ask for “my last 4 sessions” or “sessions this week”.
-Inspection prints the next step and, when the original session can be identified, its resume command. If multiple transcripts share an ID, use the printed `--file` choices to inspect a particular copy.
-Add `--source claude` or `--source codex` to list one tool only.
+Both hosts use the same histories and filters. List defaults to 15 sessions from the past 7 days. Use the ID or a unique prefix from a result to inspect it. Inspection shows the last four messages by default, the latest recorded tool outcome, and a resume command when available.
+
+For keyboard browsing in your own terminal, run `which-session list`. Type a title or folder, use the arrow keys to preview, and press Enter to inspect or expand a group. Esc exits. Use `which-session list --plain` for a copyable table or `which-session help` for terminal commands.

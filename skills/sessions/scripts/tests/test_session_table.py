@@ -8,7 +8,7 @@ import struct
 import subprocess
 import sys
 import termios
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -41,7 +41,7 @@ def terminal_output(columns, *args):
     with os.fdopen(master, "rb", buffering=0) as screen:
         with os.fdopen(slave, "wb") as output:
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, columns, 0, 0))
-            process = subprocess.Popen([*CLI, *args], stdout=output)
+            process = subprocess.Popen([*CLI, *args], stdin=subprocess.DEVNULL, stdout=output)
         chunks = []
         with process:
             try:
@@ -86,3 +86,44 @@ def test_piped_and_json_outputs_still_work_for_agents():
         assert f"`{sid}`" in markdown
     rows = json.loads("\n".join(terminal_output(40, "list", "--json")))
     assert {row["id"]: row["title"] for row in rows} == dict(zip(IDS, TITLES))
+
+
+def test_terminal_groups_runs_before_limiting_but_flat_views_keep_each_session(tmp_path):
+    project = tmp_path / "claude/projects/demo"
+    prompt = "Read and execute system/skills/hb/prompts/heartbeat-runner.md for adapter scope: local"
+    runs = [f"11111111-1111-4111-8111-{i:012d}" for i in range(2)]
+    for index, sid in enumerate(runs):
+        stamp = datetime.now(timezone.utc) + timedelta(seconds=index + 1)
+        record = {"type": "user", "cwd": f"/work/{FOLDER}", "timestamp": stamp.isoformat(),
+                  "message": {"content": prompt}}
+        (project / f"{sid}.jsonl").write_text(json.dumps(record) + "\n")
+    table = "\n".join(terminal_output(140, "list", "--limit", "2"))
+    assert "Heartbeat runner · 2 runs" in table and runs[1] in table and runs[0] not in table
+    assert sum(sid in table for sid in IDS) == 1
+    assert "2 runs" in "\n".join(terminal_output(96, "list", "--limit", "2"))
+    for args in (("list", "--ungrouped"), ("search", "adapter scope")):
+        output = "\n".join(terminal_output(140, *args))
+        assert all(sid in output for sid in runs) and "2 runs" not in output
+    flat = subprocess.check_output([*CLI, "list"], text=True)
+    assert all(sid in flat for sid in runs)
+    rows = json.loads(subprocess.check_output([*CLI, "list", "--json"]))
+    assert len(rows) == 4 and all("members" not in row and "job" not in row for row in rows)
+
+
+def test_redirected_alias_prints_the_same_markdown_as_list():
+    def redirected(command):
+        return subprocess.check_output([*CLI, command], stdin=subprocess.DEVNULL, text=True)
+
+    markdown = redirected("pick")
+    assert markdown == redirected("list") and all(f"`{sid}`" in markdown for sid in IDS)
+
+
+def test_inspection_prints_terminal_safe_metadata(tmp_path):
+    sid = IDS[0]
+    path = tmp_path / "claude/projects/demo" / (sid + ".jsonl")
+    record = {"type": "user", "cwd": "/work/\x1b[2Jproject", "gitBranch": "feature/\x07cleanup",
+              "message": {"content": "Investigate the build"}}
+    path.write_text(json.dumps(record) + "\n")
+    inspection = subprocess.check_output([*CLI, "inspect", sid, "--file", str(path)], text=True)
+    assert "project" in inspection and "cleanup" in inspection
+    assert "\x1b" not in inspection and "\x07" not in inspection

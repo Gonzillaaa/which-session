@@ -22,13 +22,21 @@ demo_dir="$(mktemp -d)/which-session"
 python3 examples/demo.py --keep "$demo_dir"
 (
   export CLAUDE_CONFIG_DIR="$demo_dir/claude" CODEX_HOME="$demo_dir/codex"
-  ./which-session list --all
+  ./which-session list --plain --all
   ./which-session search "retry policy" --all --json
   ./which-session inspect 11111111-1111-4111-8111-111111111111
 )
 ```
 
 Use `--all` for this example because the histories refer to a project in a temporary directory. The default list hides temporary projects.
+
+To try the keyboard browser with the same sample sessions, run this from the same checkout and terminal after the example above.
+
+```sh
+CLAUDE_CONFIG_DIR="$demo_dir/claude" CODEX_HOME="$demo_dir/codex" ./which-session list --all
+```
+
+Type `notes` and press **Enter**. Inspection shows the unfinished write in **Backoff notes**. To try the skill with your own sessions, open a new Claude Code or Codex chat. [Skill commands and examples](../README.md#use-the-skill-in-claude-code-or-codex)
 
 ## What you share
 

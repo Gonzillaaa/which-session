@@ -1,22 +1,12 @@
 ---
-description: "Show the last messages of one session and whether it died mid-task."
-argument-hint: "<session id or unique prefix> [--file PATH]"
+description: "Show a session’s recent messages, recorded tool outcomes and resume guidance."
+argument-hint: "ID [--n N] [--file PATH]"
 ---
 
 # /sessions:inspect
 
-Read-only.
+Run the loaded skill’s `scripts/sessions.py` with `inspect` and the full ID or unique prefix. In a standalone Claude Code install the script is at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/sessions/scripts/sessions.py`. A vault installation may provide it at `system/skills/sessions/scripts/sessions.py`.
 
-## Steps
-
-1. Run:
-   ```bash
-   sessions_skill="${CLAUDE_SKILL_DIR:-${CLAUDE_HOME:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/skills/sessions}"
-   if [[ ! -f "$sessions_skill/scripts/sessions.py" && -f system/registries/paths.yaml ]]; then
-       sessions_skill=system/skills/sessions
-   fi
-   python3 "$sessions_skill/scripts/sessions.py" tail <id-or-prefix> --n 4
-   ```
-2. When the ID matches several files, show the choices from the CLI. If the user selects a copy, pass its exact path as one argument to `--file`.
-3. Report the last recorded action, relevant file paths, any missing results and the printed next step.
-4. Show the exact resume command emitted by the script. If the folder is unavailable, include that qualification. If no command was printed, report the missing evidence.
+- Show the last four messages by default. For `/sessions:inspect ID --n 8`, pass `inspect ID --n 8`. Replace `ID` with the user’s selection.
+- If the ID matches several transcripts, show the CLI’s choices. Pass the selected path as one argument to `--file`. Keep any warning about duplicate IDs or a missing project folder.
+- Report the recorded action, relevant files, missing or failed results, and the printed next step. Copy the resume command exactly when one is available. The user runs it in their terminal.
